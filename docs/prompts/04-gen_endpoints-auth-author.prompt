@@ -1,4 +1,5 @@
-You are an expert software architect specializing in designing backend systems for AI-powered applications using FastAPI and PostgreSQL.
+You are an expert software architect specializing in designing backend systems for AI-powered 
+applications using FastAPI and PostgreSQL.
 
 I have the following Python FastAPI project structure (file tree):
 
@@ -94,10 +95,15 @@ I have the following Python FastAPI project structure (file tree):
 │   ├── ai_models.md
 │   ├── aignite-ppt.txt
 │   ├── api_endpoints.md
+│   ├── database-insert.sql
+│   ├── database-tables-creation.sql
 │   ├── database_schema.md
 │   ├── prompts
-│   │   ├── 02-framework-source-tree.prompt
-│   │   └── 03-auth-author.prompt
+│   │   ├── 01-db-tables-creation.prompt
+│   │   ├── 02-db-data-insert.prompt
+│   │   ├── 03-framework-source-tree.prompt
+│   │   ├── 04-auth-author copy.prompt
+│   │   └── 06-auth-author.prompt
 │   ├── setup_guide.md
 │   ├── source-tree-create-shscript.sh
 │   ├── swagger_generated.json
@@ -112,38 +118,41 @@ I have the following Python FastAPI project structure (file tree):
 │   ├── generate_test_data.py
 │   ├── setup_env.sh
 │   └── start_celery.sh
-└── tests
-    ├── __init__.py
-    ├── conftest.py
-    ├── test_ai
-    │   ├── test_difficulty.py
-    │   └── test_recommendation.py
-    ├── test_api
-    │   ├── test_ai_engine.py
-    │   ├── test_assessments.py
-    │   ├── test_courses.py
-    │   ├── test_recommendations.py
-    │   └── test_users.py
-    ├── test_db_manager
-    ├── test_db_manager.py
-    ├── test_models
-    │   ├── test_assessment.py
-    │   ├── test_course.py
-    │   └── test_user.py
-    └── test_services
-        ├── test_ai_service.py
-        ├── test_course_service.py
-        └── test_user_service.py
-
-I need to implement authentication and authorization using JWT (JSON Web Tokens) with PostgreSQL as the database.
+├── tests
+    ├── __init__.py
+    ├── conftest.py
+    ├── test_ai
+    │   ├── test_difficulty.py
+    │   └── test_recommendation.py
+    ├── test_api
+    │   ├── test_ai_engine.py
+    │   ├── test_assessments.py
+    │   ├── test_courses.py
+    │   ├── test_recommendations.py
+    │   └── test_users.py
+    ├── test_db_manager
+    ├── test_db_manager.py
+    ├── test_models
+    │   ├── test_assessment.py
+    │   ├── test_course.py
+    │   └── test_user.py
+    └── test_services
+        ├── test_ai_service.py
+        ├── test_course_service.py
+        └── test_user_service.py
+ 
+I need to implement users_list and add_user endpoints.
+These two endpoints doesn't required any authentication and authorization
 
 Considering the project structure above, what specific changes are required in my code, including:
 
 *   Which files need to be modified?
 *   What new functions or classes need to be added?
-*   What are the crucial code snippets for JWT creation, verification, and user authentication?
 *   Which libraries or dependencies must be installed and why?
-* Give me example
-*   Give me step by step guide
+*   Give me compleate definition of both end points
+*   Give me compleate definition of both schemas and models
+*   Add debugs logs appropriate location for better debugging
 
-Provide a detailed, step-by-step guide, referencing specific files in the project structure where changes are needed.  Assume I am using SQLAlchemy for database interactions.  Focus on the core logic; I can handle the basic FastAPI setup.  Be very detailed.
+Provide a detailed, step-by-step guide, referencing specific files in the project structure where changes are needed.  
+Assume I am using SQLAlchemy for database interactions.  
+Be very detailed.

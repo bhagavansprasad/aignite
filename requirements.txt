@@ -6,3 +6,4 @@ python-multipart
 psycopg2-binary
 sqlalchemy
 dotenv
+pydantic[email]

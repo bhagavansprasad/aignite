@@ -19,8 +19,8 @@ CREATE DATABASE aignite_db;
 \c aignite_db;
 
 -- 2. Create the users and assign privileges
-CREATE USER bhagavan WITH PASSWORD 'your_bhagavan_password'; -- Replace 'your_bhagavan_password' with a strong password
-CREATE USER dheeraj WITH PASSWORD 'your_dheeraj_password';   -- Replace 'your_dheeraj_password' with a strong password
+CREATE USER bhagavan WITH PASSWORD 'jnjnuh'; -- Replace 'your_bhagavan_password' with a strong password
+CREATE USER dheeraj WITH PASSWORD 'jnjnuh';   -- Replace 'your_dheeraj_password' with a strong password
 
 -- Check if the extension exists, and create it if it doesn't
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -54,6 +54,7 @@ INSERT INTO roles (name) VALUES ('ADMIN'), ('TEACHER'), ('STUDENT');
 -- 4. Create the users table
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
+    full_name VARCHAR(255);
     email VARCHAR(255) UNIQUE NOT NULL,
     mobile_no VARCHAR(20) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
