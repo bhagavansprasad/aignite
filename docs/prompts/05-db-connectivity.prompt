@@ -1,0 +1,42 @@
+You are an expert software developer specializing in Python, FastAPI, SQLAlchemy, and PostgreSQL. Your task is to provide a detailed, step-by-step guide for creating and running a test script to verify PostgreSQL database connectivity.
+
+Assume the following scenario:
+
+*   A developer is building a Python FastAPI application that uses SQLAlchemy to connect to a PostgreSQL database.
+*   The developer needs to create a test script to ensure that the database connection is configured correctly.
+*   The developer is using pytest for testing.
+
+The database connection details are as follows:
+
+*   **Database Server:** `localhost`
+*   **Username:** `bhagavan`
+*   **Password:** `jnjnuh` **(Important: This password is only for initial setup and testing purposes.  It must be changed immediately in a production environment.)**
+*   **Database Name:** `aignite_db`
+
+Provide a comprehensive, numbered guide that covers the following:
+
+1.  **Requirements:** List all necessary Python packages that need to be installed, including SQLAlchemy and the appropriate PostgreSQL driver (psycopg2 or asyncpg). Explain why each package is required. The instructions must have security in mind, by calling the `sqlalchemy` best practices for the database.
+2.  **Database URL:** Explain how to construct the database connection URL using the provided database details. Emphasize the importance of storing the *actual* password securely (not "jnjnuh") using environment variables or a secrets management service (e.g., AWS Secrets Manager, HashiCorp Vault) in a production environment. Provide examples of how to reference these secure storage methods instead of hardcoding the password. Show different method for the database
+
+3.  **Test Script Structure:** Provide a complete Python test script, including:
+    *   Import statements for the necessary modules (e.g., `sqlalchemy`, `pytest`).
+    *   A clear and concise test function that attempts to connect to the database.
+    *   Error handling to catch potential connection exceptions.
+    *   Assertion(s) to verify that the connection is successful.
+    *   A description and example code if pytest fixtures should be used
+
+4.  **Test Script Location:** Specify the recommended location for the test script within a typical project structure. Assume a directory called `tests` at the root of the project.
+
+5.  **Environment Variables:** Provide instructions on how to set the database connection URL as an environment variable (e.g., `DATABASE_URL`). Include examples for both Linux/macOS and Windows. Explain why this is a more secure practice than hardcoding the credentials in the script. Explain and give reference to security requirements
+
+6.  **Running the Test:** Provide the exact command-line command to execute the test script using pytest. Explain how to interpret the test results (pass/fail).
+
+7.  **Troubleshooting:** List common database connectivity issues and provide troubleshooting steps for each issue. This includes network connectivity problems, incorrect credentials, and database server not running. Include troubleshooting steps on Cloud providers
+
+8.  **Security Best Practices:** Summarize security best practices related to database credentials, including:
+    *   Never hardcoding passwords in code.
+    *   Using strong, unique passwords.
+    *   Restricting database access to only authorized users and applications.
+    *   Using a service to store encrypted secrets.
+
+The response should be suitable for a developer with intermediate Python skills. Assume the use case is in a cloud provider (AWS, GCP, Azure).
