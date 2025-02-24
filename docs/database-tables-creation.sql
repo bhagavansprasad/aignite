@@ -42,10 +42,10 @@ SELECT drop_if_exists('user_roles');
 SELECT drop_if_exists('users');
 SELECT drop_if_exists('roles');
 
--- 3. Create the roles table
 CREATE TABLE roles (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(50) UNIQUE NOT NULL
+    name VARCHAR(50) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE
 );
 
 -- Insert default roles
@@ -54,12 +54,11 @@ INSERT INTO roles (name) VALUES ('ADMIN'), ('TEACHER'), ('STUDENT');
 -- 4. Create the users table
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
-    full_name VARCHAR(255);
+    full_name VARCHAR(255),
     email VARCHAR(255) UNIQUE NOT NULL,
     mobile_no VARCHAR(20) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    role_id INT REFERENCES roles(id), -- Foreign Key
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    role_id INTEGER REFERENCES roles(id) ON DELETE SET NULL,  
     is_active BOOLEAN DEFAULT TRUE
 );
 
@@ -70,15 +69,15 @@ CREATE INDEX idx_users_role_id ON users (role_id);
 
 -- 5. Create the user_roles table (Many-to-Many relationship)
 CREATE TABLE user_roles (
-    user_id INT REFERENCES users(id) ON DELETE CASCADE, -- Cascading delete
-    role_id INT REFERENCES roles(id),
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
     PRIMARY KEY (user_id, role_id)
 );
 
 -- Create the tokens table
 CREATE TABLE tokens (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(), --Use extension to generate random UUID
-    user_id INT REFERENCES users(id) ON DELETE CASCADE, -- Cascading delete
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     token TEXT NOT NULL,
     expires_at TIMESTAMP WITH TIME ZONE
 );

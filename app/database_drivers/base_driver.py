@@ -4,7 +4,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Optional, List
 from sqlalchemy.orm import Session
-from app.models import user as user_model
+from app.models import users as user_model
 from app import schemas
 
 logger = logging.getLogger("app")  # Get logger for this module
