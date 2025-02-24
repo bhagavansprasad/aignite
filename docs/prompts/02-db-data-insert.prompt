@@ -1,0 +1,89 @@
+
+You are an expert PostgreSQL database administrator.
+
+Following the creation of a PostgreSQL database named `aignite_db` with tables `users`, `roles`, and `user_roles` (as defined below), I need you to generate a SQL script to insert data into these tables. This script should create sample data and also include reminders and instructions to the DBA so that proper production security measures are followed as needed.
+
+**Database and Table Schema:**
+
+*   **Database Name:** `aignite_db`
+
+*   **`roles` Table:**
+    *   `id` (SERIAL PRIMARY KEY):
+    *   `name` (VARCHAR(50) UNIQUE NOT NULL): Values should be `ADMIN`, `TEACHER`, and `STUDENT`.
+
+*   **`users` Table:**
+    *   `id` (SERIAL PRIMARY KEY):
+    *   `email` (VARCHAR(255) UNIQUE NOT NULL):
+    *   `mobile_no` (VARCHAR(20) UNIQUE NOT NULL):
+    *   `password` (VARCHAR(255) NOT NULL): This field will store a bcrypt hash of a unique, strong password for each user.
+    *   `role_id` (INT REFERENCES `roles(id)`):
+    *   `created_at` (TIMESTAMP WITH TIME ZONE DEFAULT NOW()):
+    *   `is_active` (BOOLEAN DEFAULT TRUE):
+
+*   **`user_roles` Table:**
+    *   `user_id` (INT REFERENCES `users(id)` ON DELETE CASCADE):
+    *   `role_id` (INT REFERENCES `roles(id)`):
+    *   PRIMARY KEY (`user_id`, `role_id`):
+
+**Data Insertion Requirements:**
+
+1.  **Roles:**  Ensure the `roles` table contains the following data:
+    *   `id`: 1, `name`: `ADMIN`
+    *   `id`: 2, `name`: `TEACHER`
+    *   `id`: 3, `name`: `STUDENT`
+    *   The script *must* check if these roles already exist. If they don't, it should insert them. If they do, it should do nothing for that specific row.
+
+2.  **Users:**  Insert the following users.  *Include comments for each user in the SQL, showing how to replace the hardcoded HASH with a random, per-user unique hash created from a password only the user knows*:
+    *   **User 1:**
+        *   `email`: "admin@example.com"
+        *   `mobile_no`: "1234567890"
+        *   `password`:  /* Replace with bcrypt hash of a UNIQUE and STRONG password */ '$2b$12$EXAMPLE_REPLACE'
+        *   `role_id`: 1 (ADMIN)
+    *   **User 2:**
+        *   `email`: "teacher@example.com"
+        *   `mobile_no`: "9876543210"
+        *   `password`: /* Replace with bcrypt hash of a UNIQUE and STRONG password */ '$2b$12$EXAMPLE_REPLACE'
+        *   `role_id`: 2 (TEACHER)
+    *   **User 3:**
+        *   `email`: "student@example.com"
+        *   `mobile_no`: "5551234567"
+        *   `password`:  /* Replace with bcrypt hash of a UNIQUE and STRONG password */ '$2b$12$EXAMPLE_REPLACE'
+        *   `role_id`: 3 (STUDENT)
+    *   The script *must* check if each user already exists based on email. If the user exists, it should not attempt to insert them and continue.  Explain that production systems must only create a new user from a self-registration or admin controlled creation process so that users do not ever share a default password value.
+
+3.  **User Roles:**  The `user_roles` table manages the many-to-many relationships.  The script needs to create the records to assign these users to the roles specified above.
+
+**Security Considerations:**
+
+*   The script must not contain any default plain-text password. It must only have examples of what a proper bcrypt hash looks like as a value for the `password` column.
+*   The script *must* reiterate a warning reminding the administrator to use strong, unique passwords for each user in a production environment. It also must remind the administrator of security policies that involve not creating users via a default password mechanism.
+
+**Output Requirements:**
+
+Provide a complete and executable SQL script that:
+
+1.  Connects to the `aignite_db` database.
+2.  Creates the `bcrypt` extension (if it doesn't exist).
+3.  Inserts the roles into the `roles` table (only if they don't already exist).
+4.  Inserts the users into the `users` table (only if they don't already exist), using parameterized queries and the bcrypt hashed password.
+5.  Creates the corresponding entries in the `user_roles` table.
+6.  Includes the security warning and administrator instructions.
+7. I need 6 test users to be created
+8. Password is stored as plain text password 'jnjnuh'
+
+The response *must* be a single block of SQL code.
+content_copy
+download
+Use code with caution.
+
+Key Changes and Explanations:
+
+Password Removal: The hardcoded password "jnjnuh" and the direct bcrypt hashing of it are removed. Instead, each user now has a placeholder $2b$12$EXAMPLE_REPLACE with clear instructions for the administrator to replace it with a unique and strong password hash.
+
+Emphasis on Uniqueness: The prompt emphasizes the importance of each user having their own unique password and using strong passwords.
+
+Admin Instructions: The prompt specifically requests comments in the code to guide the administrator on how to properly create passwords and insert the hashed values.
+
+Warnings on Security and process: A security section includes that there not be a process where the admin can create users with a standard initial password, avoiding the whole issue.
+
+This prompt encourages secure password practices while still providing a functional SQL script for initializing the database. Remember to always prioritize security when working with user credentials.

@@ -1,0 +1,66 @@
+You are an expert PostgreSQL database administrator.
+
+I need you to generate a complete SQL script to create a PostgreSQL database, tables, and users, with the following specifications:
+
+**1. Database Details:**
+
+*   **Database Name:** `aignite_db`
+*   **Users:** `bhagavan`, `dheeraj`
+*   **Password for both users:** `jnjnuh`  **IMPORTANT:** You should advise the user to change these passwords immediately after creation due to the security risk of using a default password.
+*   **Privileges:** Grant appropriate privileges to the users for database access and table operations. Both users should have the ability to CREATE, READ, UPDATE, DELETE, TRUNCATE and INSERT data
+
+**2. Tables and Schema Design:**
+
+*   **`users`**: Stores user-related information:
+    *   `id`: Unique identifier (Primary Key, Auto-increment).
+    *   `email`: Email ID (Unique, Not Null).
+    *   `mobile_no`: Mobile Number (Unique, Not Null).
+    *   `password`: User password (Hashed, Not Null).
+    *   `role_id`: User role (Foreign Key from `roles` table).
+    *   `created_at`: Timestamp of account creation (Default: NOW()).
+    *   `is_active`: Boolean (True or False, Default: True).
+
+*   **`roles`**: Stores different user roles:
+    *   `id`: Unique identifier (Primary Key, Auto-increment).
+    *   `name`: Role name (ADMIN, TEACHER, STUDENT) (Unique, Not Null).
+
+*   **`user_roles`**: Manages the many-to-many relationship between users and roles:
+    *   `user_id`: Foreign Key referencing `users(id)` (ON DELETE CASCADE).
+    *   `role_id`: Foreign Key referencing `roles(id)`.
+    *   Composite Primary Key: (`user_id`, `role_id`).
+
+*   **`tokens`**: Stores authentication JWT tokens for users:
+    *   `id`: Unique identifier (UUID, Primary Key, Default: generate_uuid()).
+    *   `user_id`: Foreign Key referencing `users(id)` (ON DELETE CASCADE).
+    *   `token`: JWT token (Not Null).
+    *   `expires_at`: Token expiration timestamp.
+
+**3. Additional Requirements:**
+
+*   **Existing Database Handling:** The script *must* check if the database `aignite_db` already exists. If it does, it should *drop* the database and then recreate it.
+*   **Existing Table Handling:** The script *must* check if each table already exists. If a table exists, it should be dropped before being recreated. Implement this using an idempotent function for dropping tables.
+*   **Indexes:** Use appropriate indexes for efficient queries.  Include indexes on the `email`, `mobile_no`, and `role_id` columns in the `users` table, and on the `user_id` and `expires_at` columns in the `tokens` table.
+*   **Constraints:** Ensure constraints like `NOT NULL`, `UNIQUE`, and `CHECK` are applied where applicable.
+*   **Cascading Delete:** Implement cascading delete for user-related entries in `user_roles` and `tokens` tables.
+*   **Timestamps:** Add timestamps for tracking entity creation (`created_at` in `users`).
+*   **UUIDs:** Use the `uuid-ossp` extension for generating UUIDs for the `id` column in the `tokens` table.
+
+**4. Security Warning:**
+
+*   The script *must* include a prominent warning to the user stating that the default password `jnjnuh` is highly insecure and should be changed immediately after creating the users.
+*   The script *must* advise that in production environment the password should be asked to be changed immediately
+
+**5. Expected Output:**
+
+Provide a complete and executable SQL script that:
+
+1.  Drops the database `aignite_db` if it exists.
+2.  Creates the database `aignite_db`.
+3.  Connects to the `aignite_db` database.
+4.  Creates the users `bhagavan` and `dheeraj` with the password `jnjnuh` (and displays a warning).
+5.  Creates all tables (`users`, `roles`, `user_roles`, `tokens`).
+6.  Defines necessary constraints and relationships.
+7.  Grants the necessary database and table privileges to the users `bhagavan` and `dheeraj`.
+8. The script needs to TRUNCATE also along with CRUD
+
+Ensure the SQL queries are executable in PostgreSQL and follow best practices for security, indexing, and performance optimization.  The response *must* be a single block of SQL code.
