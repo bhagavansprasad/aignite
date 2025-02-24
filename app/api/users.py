@@ -22,7 +22,6 @@ def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     users = user_service.get_users(db, skip=skip, limit=limit)
     logger.debug(f"Read {len(users)} users.")
     
-    # ✅ Convert SQLAlchemy objects to Pydantic models
     return [schemas.User.model_validate(user) for user in users]
 
 

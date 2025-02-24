@@ -1,5 +1,3 @@
-# aignite/tests/test_db_manager/test_db_connection.py
-
 import pytest
 import sqlalchemy
 from sqlalchemy import create_engine
