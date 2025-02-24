@@ -6,33 +6,29 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- Insert roles if they do not exist
 INSERT INTO roles (name) VALUES 
-    ('ADMIN'), 
+    ('ADMIN'),  
     ('TEACHER'), 
-    ('STUDENT')
-ON CONFLICT (name) DO NOTHING;
+    ('STUDENT');
+
 
 -- Insert users if they do not exist
-INSERT INTO users (email, mobile_no, password, role_id, created_at, is_active)
+INSERT INTO users (full_name, email, mobile_no, password, role_id, is_active)
 SELECT * FROM (VALUES
-    ('user1@example.com', '1234567890', 'jnjnuh', 1, NOW(), TRUE),
-    ('user2@example.com', '9876543210', 'jnjnuh', 2, NOW(), TRUE),
-    ('user3@example.com', '5551234567', 'jnjnuh', 3, NOW(), TRUE),
-    ('user4@example.com', '1111111111', 'jnjnuh', 1, NOW(), TRUE),
-    ('user5@example.com', '2222222222', 'jnjnuh', 2, NOW(), TRUE),
-    ('user6@example.com', '3333333333', 'jnjnuh', 3, NOW(), TRUE)
-) AS new_users(email, mobile_no, password, role_id, created_at, is_active)
+    ('user1', 'user1@example.com', '1234567890', 'jnjnuh', 1, TRUE),
+    ('user2', 'user2@example.com', '9876543210', 'jnjnuh', 2, TRUE),
+    ('user3', 'user3@example.com', '5551234567', 'jnjnuh', 3, TRUE),
+    ('user4', 'user4@example.com', '1111111111', 'jnjnuh', 1, TRUE),
+    ('user5', 'user5@example.com', '2222222222', 'jnjnuh', 2, TRUE),
+    ('user6', 'user6@example.com', '3333333333', 'jnjnuh', 3, TRUE)
+) AS new_users(email, mobile_no, password, role_id, is_active)
 WHERE NOT EXISTS (
     SELECT 1 FROM users WHERE users.email = new_users.email
 );
 
 -- Insert user roles if they do not exist
-INSERT INTO user_roles (user_id, role_id)
-SELECT users.id, users.role_id FROM users
-ON CONFLICT (user_id, role_id) DO NOTHING;
 
 SELECT * FROM users;
 SELECT * FROM roles;
-SELECT * FROM user_roles;
 
 -- SECURITY WARNING: 
 -- - Ensure that each user is created with a strong and unique password.
