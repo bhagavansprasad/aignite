@@ -7,9 +7,8 @@ from sqlalchemy.orm import sessionmaker, Session
 
 from app.core.config import DATABASE_URL
 from app.models.base import Base
-from app.models import user as user_model
+from app import models, schemas
 from app.database_drivers.base_driver import BaseDriver
-from app import schemas
 from app.core import security
 
 logger = logging.getLogger("app")  # Get logger for this module
@@ -31,22 +30,23 @@ class PostgresDriver(BaseDriver):
         self.engine = create_engine(db_url)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
 
-    def get_user(self, db: Session, user_id: str) -> Optional[user_model.User]:
+    def get_user(self, db: Session, user_id: str) -> Optional[models.User]:
         """Retrieve a user by their ID."""
         logger.debug(f"Retrieving user with ID: {user_id}")
-        user = db.query(user_model.User).filter(user_model.User.user_id == user_id).first()
+        user = db.query(models.User).filter(models.User.user_id == user_id).first()
         if user:
             logger.debug(f"User found: {user.email}")
         else:
             logger.debug("User not found.")
         return user
 
-    def create_user(self, db: Session, user: schemas.UserCreate) ->  user_model.User:
+    def create_user(self, db: Session, user: schemas.UserCreate) ->  models.User:
         """Register a new user."""
         logger.debug(f"Registering a new user with email: {user.email}")
-        hashed_password = security.get_password_hash(user.password)
+        # hashed_password = security.get_password_hash(user.password)
+        hashed_password = user.password
 
-        db_user = user_model.User(
+        db_user = models.User(
             full_name=user.full_name, 
             email=user.email, 
             mobile_no=user.mobile_no, 
@@ -59,10 +59,10 @@ class PostgresDriver(BaseDriver):
         logger.info(f"User {user.email} successfully registered")
         return db_user
 
-    def get_users(self, db: Session, skip: int = 0, limit: int = 100) -> List[user_model.User]:
+    def get_users(self, db: Session, skip: int = 0, limit: int = 100) -> List[models.User]:
         """Retrieves all users"""
         logger.debug(f"Retrieving all users with skip: {skip} and limit: {limit}")
-        users = db.query(user_model.User).offset(skip).limit(limit).all()
+        users = db.query(models.User).offset(skip).limit(limit).all()
         logger.debug(f"Retrieved {len(users)} users.")
         return users
 
