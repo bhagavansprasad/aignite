@@ -1,0 +1,101 @@
+#!/bin/bash
+
+# Set the root directory name
+PROJECT_NAME="aignite"
+
+# Create the root directory
+mkdir -p "$PROJECT_NAME"
+cd "$PROJECT_NAME"
+
+# Create the main application directory
+mkdir -p app/api app/ai app/core app/database_drivers app/models app/schemas app/services app/static app/media
+
+# Create __init__.py files in each directory
+find app -type d -exec touch {}/__init__.py \;
+find app/ai -type d -exec touch {}/__init__.py \;
+
+# Create subdirectories in ai/
+mkdir -p app/ai/services app/ai/llm_connectors app/ai/models app/ai/schemas app/ai/prompts
+
+# Create __init__.py files in each ai subdirectory
+find app/ai -type d -exec touch {}/__init__.py \;
+
+# Create subdirectories in static/ and media/
+mkdir -p app/static/images app/static/reports app/static/pdfs app/media/recommendation_outputs app/media/user_profiles app/media/assessment_reports
+
+# Create logs
+mkdir -p logs
+
+# Create the tests directory
+mkdir -p tests/ test_api/ test_services/ test_ai/ test_models/ test_db_manager/
+find tests -type d -exec touch {}/__init__.py \;
+
+# Create API test subdirectories
+mkdir -p tests/test_api/ test_api/ test_api/ test_api/ test_api/
+
+# Create service test subdirectories
+mkdir -p tests/test_services/
+
+# Create AI test subdirectories
+mkdir -p tests/test_ai/
+
+# Create Model test subdirectories
+mkdir -p tests/test_models/
+
+# Create the docs directory
+mkdir -p docs/
+
+# Create the scripts directory
+mkdir -p scripts/
+
+# Create the root files
+touch .env requirements.txt docker-compose.yml Makefile README.md app/main.py db_manager.py
+
+# Create initial files in the docs directory
+touch docs/api_endpoints.md docs/database_schema.md docs/ai_models.md docs/setup_guide.md docs/swagger_generated.json
+
+# Create initial files in the scripts directory
+touch scripts/db_init.py scripts/generate_test_data.py scripts/backup_db.sh scripts/start_celery.sh scripts/setup_env.sh
+
+# Create initial files in the core directory
+touch app/core/config.py app/core/database.py app/core/security.py app/core/utils.py app/core/async_tasks.py app/core/logging_config.py app/core/cache_manager.py
+
+# Create database drivers in the database_drivers directory
+touch app/database_drivers/base_driver.py app/database_drivers/postgres_driver.py app/database_drivers/mysql_driver.py app/database_drivers/sqlite_driver.py app/database_drivers/mongo_driver.py
+
+# Create models in the models directory
+touch app/models/base.py app/models/user.py app/models/course.py app/models/assessment.py app/models/recommendation.py app/models/learning_progress.py
+
+# Create schemas in the schemas directory
+touch app/schemas/user_schemas.py app/schemas/course_schemas.py app/schemas/assessment_schemas.py app/schemas/recommendation_schemas.py app/schemas/learning_progress_schemas.py
+
+# Create services in the services directory
+touch app/services/user_service.py app/services/course_service.py app/services/assessment_service.py app/services/recommendation_service.py app/services/learning_progress_service.py
+
+# Create AI services in the ai/services directory
+touch app/ai/services/recommendation_service.py app/ai/services/difficulty_service.py
+
+# Create LLM connectors in the ai/llm_connectors directory
+touch app/ai/llm_connectors/openai_connector.py app/ai/llm_connectors/cohere_connector.py app/ai/llm_connectors/huggingface_connector.py
+
+# Create models in the ai/models directory
+touch app/ai/models/prompt_model.py app/ai/models/llm_response_model.py app/ai/models/qa_response_model.py
+
+# Create schemas in the ai/schemas directory
+touch app/ai/schemas/prompt_schema.py app/ai/schemas/llm_response_schema.py app/ai/schemas/qa_response_schema.py
+
+# Create initial files in the ai directory
+touch app/ai/recommendation.py app/ai/difficulty.py app/ai/ai_service.py
+
+# Create prompts directory
+touch app/ai/prompts/generate_assessment_prompt.txt app/ai/prompts/recommend_topic_prompt.txt
+
+# Create test files
+touch tests/conftest.py
+touch tests/test_api/test_users.py tests/test_api/test_courses.py tests/test_api/test_assessments.py tests/test_api/test_recommendations.py tests/test_api/test_ai_engine.py
+touch tests/test_services/test_user_service.py tests/test_services/test_course_service.py tests/test_services/test_ai_service.py
+touch tests/test_ai/test_recommendation.py tests/test_ai/test_difficulty.py
+touch tests/test_db_manager.py
+touch tests/test_models/test_user.py tests/test_models/test_course.py tests/test_models/test_assessment.py
+
+echo "Aignite project structure created successfully in directory '$PROJECT_NAME'."

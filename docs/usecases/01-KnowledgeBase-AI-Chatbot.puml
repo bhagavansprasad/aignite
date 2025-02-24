@@ -1,0 +1,75 @@
+You asked me to make changes, but you didn't specify what changes you wanted. I assume you meant you wanted the diagram to reflect the shortened aliases you used for the participants (UI, Logic, Base, Storage). Here's the updated PlantUML code:
+
+@startuml
+title Sequence Diagram - Knowledge Base & AI Chatbot
+
+actor User
+participant AIgnite as UI
+participant Chatbot as Logic
+participant Knowledge as Base
+database Document as Storage
+
+User -> UI: Asks Question via Chatbot
+activate UI
+
+UI -> Logic: Sends Question
+activate Logic
+
+Logic -> Base: Searches for Relevant Information
+activate Base
+
+Base -> Storage: Retrieves Relevant Document Chunks
+activate Storage
+
+Storage --> Base: Returns Document Chunks
+deactivate Storage
+
+Base --> Logic: Returns Relevant Information
+deactivate Base
+
+Logic -> Logic: Processes Information (AI Inference)
+activate Logic
+
+Logic --> UI: Returns Answer
+deactivate Logic
+
+UI --> User: Displays Answer
+deactivate UI
+
+User -> UI: Uploads Document
+activate UI
+
+UI -> Base: Sends Document
+activate Base
+
+Base -> Storage: Stores Document
+activate Storage
+
+Storage --> Base: Confirmation
+deactivate Storage
+
+Base --> UI: Confirmation
+deactivate Base
+
+UI --> User: Confirmation
+deactivate UI
+
+@enduml
+content_copy
+download
+Use code with caution.
+Plantuml
+
+Changes Made:
+
+The participant aliases have been used throughout the diagram:
+
+AIgnite UI is now UI
+
+Chatbot Logic is now Logic
+
+Knowledge Base is now Base
+
+Document Storage is now Storage
+
+The functionality and flow of the diagram remain exactly the same. Only the participant names in the diagram code have been shortened.

@@ -1,0 +1,54 @@
+You are an expert software architect specializing in designing backend systems for AI-powered applications using FastAPI.  Your task is to generate a detailed folder tree structure for an AI-powered adaptive learning application.
+
+Application Requirements:
+
+*   The application is built using FastAPI.
+*   It must support multiple sets of APIs.
+*   The application uses AI functions, stored in an `ai/` directory, which utilize pre-trained model files and may have associated input/output schemas.
+*   The primary database is PostgreSQL, but the architecture *must* be fully database-agnostic, allowing easy switching to MySQL, SQLite, or MongoDB.
+*   A comprehensive testing framework is required, supporting both end-to-end (E2E) and unit testing.
+*   The database configuration must be modular and scalable.
+*   The application should support asynchronous AI task processing for computationally intensive operations.
+*   The project should be Docker-ready, include comprehensive logging, and use environment-based configuration.
+
+Design Principles:
+
+*   Strict Separation of Concerns: API endpoints must *only* handle request/response and validation.  They *must not* directly interact with AI functions or the database.  All business logic, including AI interactions and database operations, *must* be delegated to a dedicated "services" layer. The services layer acts as the intermediary.
+*   Database Agnosticism:  A database abstraction layer must be implemented using an abstract base class (`base_driver.py`) for database drivers. A `db_manager.py` file should dynamically select the active database driver based on configuration.
+*   Modularity:  The system should be highly modular, with clear separation between components (API, AI, services, database, core utilities).
+*   Scalability: The design should be scalable and maintainable.
+*   Testability: The structure must facilitate thorough and easy testing, with separate directories for different test types (API endpoints, services, AI functions, database manager, models).
+
+Output Format:
+
+Provide the output as a file tree structure using consistent indentation (four spaces). Use descriptive and conventional names for directories and files (e.g., `users.py`, `course_service.py`, `postgresql_driver.py`). Include `__init__.py` files in all directories that should be treated as Python packages.
+
+The structure *must* include *all* necessary directories and files for a complete, production-ready application, encompassing:
+
+*   API endpoints (in `app/api/`)
+*   AI functions, models, and schemas (in `app/ai/`)
+*   Database drivers (in `app/database_drivers/`)
+*   Database models (in `app/models/`)
+*   Pydantic schemas for API validation (in `app/schemas/`)
+*   Service layer components (in `app/services/`)
+*   Core application components (in `app/core/`), including:
+    *   Configuration (`config.py`)
+    *   Database connection management (`database.py`)
+    *   Security (`security.py`)
+    *   Utilities (`utils.py`)
+    *   Asynchronous task handling (`async_tasks.py`)
+    *   Logging configuration (`logging_config.py`)
+    *   Caching (`cache_manager.py` - optional)
+*   A database manager (`app/db_manager.py`)
+*   Static file storage (in `app/static/`)
+*   Media file storage (in `app/media/`)
+*   Comprehensive tests (in `tests/`), organized into subdirectories for API, services, AI, database manager, and models.
+*   Documentation (in `docs/`)
+*   Helper scripts (in `scripts/`)
+*   Environment variable file (`.env`)
+*   Requirements file (`requirements.txt`)
+*   Docker Compose file (`docker-compose.yml` - optional)
+*   Makefile (`Makefile` - optional)
+*   Project README (`README.md`)
+
+Expected output tree:
