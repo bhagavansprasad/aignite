@@ -88,3 +88,4 @@ clean:
 	@echo "Executing: find $(BASE_FOLDER) -name __pycache__ -type d -exec rm -rf {} +"
 	@find "$(BASE_FOLDER)" -name __pycache__ -type d -exec rm -rf {} +
 	@echo "Cleaned."
+
