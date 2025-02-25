@@ -48,6 +48,13 @@ CREATE TABLE roles (
     is_active BOOLEAN DEFAULT TRUE
 );
 
+CREATE TABLE endpoint_roles (
+    id SERIAL PRIMARY KEY,
+    endpoint_name VARCHAR(255) NOT NULL,
+    role_id INTEGER NOT NULL,
+    FOREIGN KEY (role_id) REFERENCES roles(id)
+);
+
 -- Insert default roles
 INSERT INTO roles (name) VALUES ('ADMIN'), ('TEACHER'), ('STUDENT');
 

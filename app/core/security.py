@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.users import User
 from app.models.tokens import Token
+from app.models.endpoint_role import EndpointRole 
+from typing import List
 
 logger = logging.getLogger("app")  
 
@@ -83,3 +85,47 @@ def _get_user_from_token(token: str, db: Session):
     except Exception as e: # Catch any other exceptions
         logger.exception("Error decoding token: %s", e)  # Log the exception
         raise HTTPException(status_code=401, detail="Invalid token")  # Generic message
+
+def get_allowed_roles_for_endpoint(endpoint_name: str, db: Session) -> List[int]:
+    """
+    Fetches the allowed role IDs for a given endpoint from the database.
+
+    Args:
+        endpoint_name: The name of the endpoint (e.g., "detailed_list_users").
+        db: The database session.
+
+    Returns:
+        A list of allowed role IDs, or an empty list if the endpoint is not found.
+    """
+    try:
+        endpoint_roles = db.query(EndpointRole).filter(EndpointRole.endpoint_name == endpoint_name).all()
+        if endpoint_roles:
+            return [endpoint_role.role_id for endpoint_role in endpoint_roles]
+        else:
+            logger.warning(f"No roles found for endpoint: {endpoint_name}")
+            return []  # Or raise an exception if you prefer to enforce that all endpoints have roles
+    except Exception as e:
+        logger.error(f"Error fetching roles for endpoint {endpoint_name}: {e}")
+        return []  # Or raise an exception
+    
+def check_role(endpoint_name: str):
+    """
+    Dependency that checks if the current user has one of the allowed roles for the given endpoint.
+    """
+    def role_check_dependency(
+        current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)
+    ):
+        allowed_roles = get_allowed_roles_for_endpoint(endpoint_name, db)
+        if not allowed_roles:
+            logger.warning(f"No roles configured for endpoint: {endpoint_name}")
+            raise HTTPException(status_code=403, detail="Endpoint not configured with roles") # Raise an error instead
+
+        if current_user.role_id not in allowed_roles:
+            logger.warning(
+                f"User {current_user.email} with role ID {current_user.role_id} attempted to access endpoint "
+                f"{endpoint_name} requiring roles {allowed_roles}."
+            )
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        return current_user
+
+    return role_check_dependency
