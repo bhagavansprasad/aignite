@@ -21,6 +21,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
 
     role = relationship("app.models.roles.Role", back_populates="users") 
+    tokens = relationship("Token", back_populates="user", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"
