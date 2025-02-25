@@ -46,4 +46,11 @@ class Token(BaseModel):
 class UserList(BaseModel):
     users: List[User]
 
+class UserRoleListResponse(BaseModel):
+    full_name: str
+    role_id: int
+
+class UsersListResponse(BaseModel):
+    full_name: str
+    
 logger.debug("User schemas defined.")
