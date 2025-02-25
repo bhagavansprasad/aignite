@@ -15,15 +15,6 @@ logger = logging.getLogger("app")  # Get logger for this module
 
 from app.core.database import SessionLocal
 
-def get_db() -> Generator:
-    logger.debug("Creating database session.")
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-        logger.debug("Closing database session.")
-
 class PostgresDriver(BaseDriver):
     def __init__(self, db_url: str = DATABASE_URL):
         logger.debug(f"Initializing PostgresDriver with URL: {db_url}")

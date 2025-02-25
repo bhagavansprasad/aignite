@@ -1,15 +1,12 @@
 # app/api/users.py
 import logging
-
 from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
 from app import schemas
 from app import models
 from app.database_drivers.base_driver import BaseDriver
-from app.database_drivers.postgres_driver import PostgresDriver, get_db
+from app.core.database import get_db
 from app.services import user_service
 
 router = APIRouter()

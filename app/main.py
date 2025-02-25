@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import ALLOWED_HOSTS
 from app.api import router as api_router
 from app.core.logging_config import configure_logging
-from app.database_drivers.postgres_driver import get_db
+from app.core.database import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
