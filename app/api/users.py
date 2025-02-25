@@ -10,7 +10,7 @@ from app import models
 from app.database_drivers.base_driver import BaseDriver
 from app.core.database import get_db
 from app.services import user_service
-from app.core.security import get_current_active_user
+from app.core.security import check_role
 router = APIRouter()
 
 logger = logging.getLogger("app") 
@@ -20,7 +20,7 @@ async def detailed_list_users(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: schemas.User = Depends(get_current_active_user)
+    current_user: schemas.User = Depends(check_role("detailed_list_users"))
 ):
     logger.info("Reading users from the database (detailed).")
     users = user_service.get_users(db, skip=skip, limit=limit)
@@ -33,7 +33,7 @@ async def list_user_roles(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: schemas.User = Depends(get_current_active_user)
+    current_user: schemas.User = Depends(check_role("list_user_roles"))
 ):
     logger.info("Reading users from the database (basic).")
     users = user_service.get_users(db, skip=skip, limit=limit)
@@ -48,7 +48,7 @@ async def list_users(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: schemas.User = Depends(get_current_active_user)
+    current_user: schemas.User = Depends(check_role("list_users"))
 ):
     logger.info("Reading users from the database (basic).")
     users = user_service.get_users(db, skip=skip, limit=limit)
@@ -60,7 +60,11 @@ async def list_users(
 
 
 @router.post("/", response_model=schemas.User)
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+def create_user(
+    user: schemas.UserCreate, 
+    db: Session = Depends(get_db),
+    current_user: schemas.User = Depends(check_role("create_user"))
+):
     """
     Create a new user. No authentication required for this example.
     """

@@ -1,23 +1,20 @@
 # app/models/tokens.py
-import logging
-
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, func, Uuid
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import text
-
-from app.models.base import Base
-
-logger = logging.getLogger("app")  # Get logger for this module
+import uuid
+from app.core.database import Base
+from app.models.users import User
 
 class Token(Base):
     __tablename__ = "tokens"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
-    token = Column(String, nullable=False) # changed from Text
-    expires_at = Column(DateTime(timezone=True), nullable=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE")) # add ondelete
+    token = Column(String, nullable=False)
+    expires_at = Column(DateTime)
 
-    user = relationship("User", back_populates="tokens")
+    user = relationship("User", back_populates="tokens") # point back to user using user
 
-logger.debug("Token model defined.")
+    def __repr__(self):
+        return f"<Token(id='{self.id}')>"
