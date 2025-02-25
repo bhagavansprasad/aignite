@@ -4,7 +4,7 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 import jwt
 from app.core.config import SECRET_KEY, ALGORITHM
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, FastAPI
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -129,3 +129,54 @@ def check_role(endpoint_name: str):
         return current_user
 
     return role_check_dependency
+
+
+def verify_all_endpoints_have_roles(app: FastAPI, db: Session):
+    """
+    Verifies that all API endpoints (except for excluded endpoints) have at least one role assigned in the endpoint_roles table.
+    Logs a bold warning message for any missing endpoints and logs the endpoints with existing role assignments.
+    """
+    try:
+        # 1. Define a set of endpoints to exclude from the role assignment check
+        excluded_endpoints = {
+            "login",
+            "logout",
+        }
+
+        # 2. Get a set of all API endpoint names from the FastAPI app, excluding the excluded endpoints
+        all_endpoints = {
+            route.name for route in app.routes
+            if hasattr(route, "name")
+            and route.name not in excluded_endpoints # exclude login and logout
+            and not route.path.startswith("/docs") # exclude swagger
+            and not route.path.startswith("/openapi.json") # exclude openapi
+            and not route.path.startswith("/redoc") # exclude redoc
+        }
+
+        # 3. Get a set of all endpoint names that have roles assigned in the database
+        assigned_endpoints = {
+            er.endpoint_name for er in db.query(EndpointRole).all()
+        }
+
+        # 4. Find the endpoints that are missing roles
+        missing_endpoints = all_endpoints - assigned_endpoints
+
+        # 5. Log a bold warning message for each missing endpoint
+        if missing_endpoints:
+            logger.warning(
+                "\033[1m" + "WARNING: The following API endpoints are missing role assignments:" + "\033[0m")
+            for endpoint in missing_endpoints:
+                logger.warning("\033[1m" + f"  - {endpoint}" + "\033[0m")
+            logger.warning(
+                "\033[1m" + "Please assign roles to these endpoints in the endpoint_roles table." + "\033[0m")
+
+        # 6. Log the endpoints that have role assignments
+        if assigned_endpoints:
+            logger.info("The following API endpoints have role assignments:")
+            for endpoint in assigned_endpoints:
+                logger.info(f"  - {endpoint}")
+        else:
+            logger.info("No API endpoints have role assignments yet.")
+
+    except Exception as e:
+        logger.error(f"Error verifying endpoint role assignments: {e}")
