@@ -5,12 +5,11 @@ from app.models.users import User
 from app.models.roles import Role
 from app.models.tokens import Token
 from app.core.security import create_access_token, verify_password
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_current_active_user
 import jwt
 import logging
 from app.core.security import SECRET_KEY, ALGORITHM
 from pdbwhereami import whereami
-
 
 router = APIRouter()
 
@@ -69,16 +68,28 @@ def login(
 
 
 @router.post("/logout")
-def logout(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def logout(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
     """
-    Handles user logout by removing the active JWT token from the database.
+    Logs out the current user by deleting their token from the database.
     """
-    # ✅ Delete user's token from the database
-    deleted = db.query(Token).filter(Token.user_id == current_user.id).delete()
+    try:
+        # Retrieve the token to be deleted from the database
+        token_to_delete = db.query(Token).filter(Token.user_id == current_user.id).first()
 
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Token not found or already logged out.")
+        if not token_to_delete:
+            logging.warning(f"Token not found for user ID {current_user.id} or already logged out.")
+            raise HTTPException(status_code=404, detail="Token not found or already logged out.")
 
-    db.commit()
-    
-    return {"message": "Successfully logged out"}
+        # Delete the token from the database
+        db.delete(token_to_delete)
+        db.commit()
+        logging.info(f"User {current_user.email} logged out successfully.")
+        return {"message": "Successfully logged out"}
+
+    except Exception as e:
+        logging.error(f"Error during logout: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal server error")

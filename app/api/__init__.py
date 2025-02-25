@@ -7,6 +7,6 @@ from . import users, auth
 logger = logging.getLogger("app")  # Get logger for this module
 
 router = APIRouter()
-router.include_router(users.router, prefix="/users", tags=["users"])
-router.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
+router.include_router(users.router, prefix="/users", tags=["Users"])
 logger.info("Starting API Routes")

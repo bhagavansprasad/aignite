@@ -18,14 +18,6 @@ logger = logging.getLogger("app")  # Get logger for this module
 
 app = FastAPI()
 
-@app.get("/test_db_connection")
-def test_db_connection(db: Session = Depends(get_db)):
-    try:
-        db.execute(text("SELECT 1"))  # Simple query to test the connection
-        return {"message": "Database connection successful!"}
-    except Exception as e:
-        return {"message": f"Database connection failed: {e}"}
-    
 # Set all CORS enabled origins
 if ALLOWED_HOSTS:
     app.add_middleware(
