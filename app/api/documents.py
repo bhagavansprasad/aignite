@@ -2,39 +2,43 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.services.document_service import DocumentService
-from app.schemas.uris_schemas import URIResponse
+from app.schemas.uris_schemas import URIResponse 
 from app.core.security import check_role
 from app.schemas import user_schemas
 import logging
+from fastapi.responses import JSONResponse
+from typing import Dict
 
 logger = logging.getLogger("app")
 
 router = APIRouter()
 
-@router.post("/documents/ingest/", response_model=URIResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/documents/ingest/", status_code=status.HTTP_201_CREATED)
 async def ingest_documents(
     *,
     uri: str = Query(..., description="GCS URI of the bucket"),
     db: Session = Depends(get_db),
-    current_user: user_schemas.User = Depends(check_role("ingest_documents")),
-    created_by_system: str = Query(None, description="System that created the URI entry (optional)")
-):
+    current_user: user_schemas.User = Depends(check_role("ingest_documents"))
+) -> JSONResponse:
     """
     Ingest documents from a GCS bucket.
     - Adds an entry to the `uris` table.
+    - Returns the URI entry and GCS metadata as JSON.
     - Requires 'ingest_documents' permission.
     """
     logger.info(f"User {current_user.email} is ingesting documents from URI: {uri}")
 
+    document_service = DocumentService(db)
     try:
-        document_service = DocumentService(db)
+        # Create the URI entry in the database
+        # Pass an empty dictionary for metadata since we are not taking metadata from request body
         uri_obj = await document_service.create_uri_entry(
             uri=uri,
             user_id=current_user.id,
-            created_by_system=created_by_system
+            created_by_system=None,  
+            metadata={}
         )
         logger.info(f"Created URI entry: {uri_obj.uri}")
-        return uri_obj
     except HTTPException as e:
         logger.error(f"Error during URI creation: {e.detail}")
         raise
@@ -43,4 +47,43 @@ async def ingest_documents(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error creating URI entry."
+        )
+
+    try:
+        # Get the GCS metadata
+        gcs_metadata = await document_service.process_gcs_uri(uri)
+
+        # Create a dictionary for the URI entry
+        uri_entry_data = {
+            "id": uri_obj.id,
+            "uri": uri_obj.uri,
+            "user_id": uri_obj.user_id,
+            "created_at": uri_obj.created_at.isoformat() if uri_obj.created_at else None,  # Convert to string
+            "last_processed_at": uri_obj.last_processed_at.isoformat() if uri_obj.last_processed_at else None,  # Convert to string
+            "status": uri_obj.status,
+            "error_message": uri_obj.error_message,
+            "created_by_system": uri_obj.created_by_system,
+            "metadata": uri_obj.metadata if isinstance(uri_obj.metadata, dict) else {}  # Ensure it's a dictionary
+        }
+
+        # Validate the URI entry data using the URIResponse schema
+        uri_entry = URIResponse(**uri_entry_data)
+
+        # Combine the URI response and GCS metadata into a single dictionary
+        response_data: Dict = {
+            "uri_entry": uri_entry.dict(),  # Use the validated URIResponse object
+            "gcs_metadata": gcs_metadata
+        }
+
+        logger.info(f"gcs_metadata: {gcs_metadata}")
+        return JSONResponse(content=response_data, status_code=status.HTTP_201_CREATED)
+
+    except HTTPException as e:
+        logger.error(f"Error during GCS metadata processing: {e.detail}")
+        raise
+    except Exception as e:
+        logger.exception(f"Unexpected error during GCS metadata processing: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error processing GCS metadata."
         )
