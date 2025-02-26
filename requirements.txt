@@ -10,3 +10,7 @@ pydantic[email]
 httpx
 requests
 pyjwt
+PyMuPDF
+google-cloud-storage
+pydantic-settings
+vertexai

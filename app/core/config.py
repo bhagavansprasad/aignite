@@ -1,9 +1,19 @@
+# app/core/config.py
 import os
+from pydantic_settings import BaseSettings
+from typing import Optional
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://bhagavan:jnjnuh@localhost/aignite_db")
-ALLOWED_HOSTS = ["*"]
+class Settings(BaseSettings):
+    DATABASE_URL: str = os.environ.get("DATABASE_URL", "postgresql://bhagavan:jnjnuh@localhost/aignite_db")
+    ALLOWED_HOSTS: list[str] = ["*"]  
+    SECRET_KEY: str = "aignite-secret-key"  # !!! WARNING !!! See below
+    ALGORITHM: str = "HS256"
+    TEST_DATABASE_URL: str = os.environ.get("TEST_DATABASE_URL", "postgresql://bhagavan:jnjnuh@localhost/aignite_db_test")
+    MEDIA_ROOT: str = "app/media"  
+    GEMINI_MODEL_NAME: str = os.environ.get("GEMINI_MODEL_NAME", "gemini-2.0-pro-exp-02-05")
 
-SECRET_KEY = "aignite-secret-key"
-ALGORITHM = "HS256"
 
-TEST_DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://bhagavan:jnjnuh@localhost/aignite_db_test")
+    class Config:
+        env_file = ".env"  # Load from .env file
+
+settings = Settings()

@@ -8,7 +8,7 @@ from app.core.security import create_access_token, verify_password
 from app.core.security import get_current_user, get_current_active_user
 import jwt
 import logging
-from app.core.security import SECRET_KEY, ALGORITHM
+from app.core.config import settings 
 from pdbwhereami import whereami
 
 router = APIRouter()
@@ -41,7 +41,7 @@ def login(
     if existing_token_entry:
         try:
             # Decode and validate the existing token
-            jwt.decode(existing_token_entry.token, SECRET_KEY, algorithms=[ALGORITHM])
+            jwt.decode(existing_token_entry.token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
             return {
                 "access_token": existing_token_entry.token,
                 "token_type": "bearer",

@@ -1,0 +1,56 @@
+@startuml
+participant User
+participant API as "Backend API"
+participant DocService as "Document Service"
+participant AI as "AI Functions"
+participant LLM
+participant Database
+
+User -> API : Provide S3 URI (Google Cloud Storage)
+activate API
+
+API -> DocService : Get document list from S3 URI
+activate DocService
+
+DocService -> DocService : List objects in S3 bucket
+DocService --> API : List of document details (basic: filename, S3 URI)
+deactivate DocService
+
+loop For each document in list
+    API -> DocService : Process Document (filename, S3 URI)
+    activate DocService
+
+    DocService -> DocService : Get file size, timestamp from S3 metadata
+    DocService -> DocService : Download file (or part of it) from S3
+    DocService -> DocService : Calculate md5sum
+
+    API <- DocService : file size, timestamp, md5sum, S3 URI
+    deactivate DocService
+
+    API -> AI : Process Document (S3 URI, file size, timestamp, md5sum)
+    activate AI
+
+    AI -> LLM : Get in-depth document details (S3 URI)
+    activate LLM
+
+    LLM --> AI : doc_name, subject, doc_type, \n author, class, sections, chapters, \n (other metadata inferred by LLM)
+    deactivate LLM
+
+    AI --> API :  doc_name, uri, size, subject, \n doc_type, md5sum, timestamp, \n author, class, sections, chapters
+    deactivate AI
+
+    API -> DocService: Save Document Details
+     activate DocService
+     DocService -> Database : Insert/Update Document Record
+     activate Database
+     Database --> DocService : Success/Failure
+     deactivate Database
+    DocService --> API: save status
+    deactivate DocService
+
+end
+
+API --> User : Success/Failure Message (overall)
+deactivate API
+
+@enduml
