@@ -89,6 +89,65 @@ CREATE TABLE tokens (
     expires_at TIMESTAMP WITH TIME ZONE
 );
 
+
+-- Table: uris
+CREATE TABLE uris (
+    id SERIAL PRIMARY KEY,
+    uri VARCHAR(2048) UNIQUE NOT NULL,
+    user_id INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_processed_at TIMESTAMP WITH TIME ZONE,
+    status VARCHAR(50) DEFAULT 'pending',
+    error_message TEXT,
+    created_by_system VARCHAR(255),  -- Optional: System that created the URI
+    CONSTRAINT fk_uris_user_id
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE SET NULL
+);
+
+-- Index on user_id for faster lookups
+CREATE INDEX idx_uris_user_id ON uris (user_id);
+
+-- Table: documents
+CREATE TABLE documents (
+    id SERIAL PRIMARY KEY,
+    uri_id INTEGER NOT NULL,
+    bucket VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    size BIGINT NOT NULL,
+    last_modified TIMESTAMP WITH TIME ZONE NOT NULL,
+    content_type VARCHAR(255),
+    e_tag VARCHAR(255),
+    indexed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (uri_id) REFERENCES uris(id),
+    CONSTRAINT fk_documents_uri_id  -- Explicitly name the constraint
+      FOREIGN KEY (uri_id) REFERENCES uris(id) ON DELETE CASCADE   -- Use ON DELETE CASCADE here.
+);
+
+-- Index on bucket and key for faster lookups
+CREATE INDEX idx_documents_bucket_key ON documents (bucket, key);
+-- Index on uri_id
+CREATE INDEX idx_documents_uri_id ON documents (uri_id);
+
+-- Trigger to update updated_at timestamp on update
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER documents_update_updated_at
+BEFORE UPDATE ON documents
+FOR EACH ROW
+EXECUTE PROCEDURE update_updated_at();
+
+
+
 -- Create index on tokens table
 CREATE INDEX idx_tokens_user_id ON tokens (user_id);
 CREATE INDEX idx_tokens_expires_at ON tokens (expires_at);

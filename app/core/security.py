@@ -3,7 +3,7 @@ import logging
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 import jwt
-from app.core.config import SECRET_KEY, ALGORITHM
+from app.core.config import settings 
 from fastapi import Depends, HTTPException, FastAPI
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
@@ -41,7 +41,7 @@ def create_access_token(data: dict, expires_delta: timedelta = timedelta(hours=1
     to_encode = data.copy()
     expire = datetime.utcnow() + expires_delta
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 def get_current_user(token: str = Depends(bearer_scheme), db: Session = Depends(get_db)):
     """
@@ -60,7 +60,7 @@ def _get_user_from_token(token: str, db: Session):
     Helper function to decode the JWT token and retrieve the user.
     """
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get("user_email")
 
         if email is None:

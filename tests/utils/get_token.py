@@ -32,7 +32,7 @@ def get_token_from_login(config_file="config.json"):
         logger.error("Missing server_url, username, or password in config.json")
         return None
 
-    login_url = f"{server_url}/auth/login"
+    login_url = f"{server_url}/api/auth/login"
 
     data = {
         "username": username,

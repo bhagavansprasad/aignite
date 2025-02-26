@@ -14,8 +14,8 @@ LOG_LEVELS = {
 }
 
 # Default log level
-DEFAULT_LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
-LOGGING_LEVEL = LOG_LEVELS.get(DEFAULT_LOG_LEVEL, logging.INFO)  # Fallback to INFO
+DEFAULT_LOG_LEVEL = os.environ.get('LOG_LEVEL', 'DEBUG').upper()
+LOGGING_LEVEL = LOG_LEVELS.get(DEFAULT_LOG_LEVEL, logging.DEBUG)  # Fallback to INFO
 
 # Define log directory
 LOG_DIR = "logs" # same folder
@@ -30,7 +30,8 @@ LOGGING_CONFIG = {
     'disable_existing_loggers': False,
     'formatters': {
         'standard': {
-            'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+            # 'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+            'format': '%(asctime)s [%(levelname)s] %(name)s (%(filename)s:%(lineno)d): %(message)s'
         },
     },
     'handlers': {

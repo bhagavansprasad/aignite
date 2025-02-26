@@ -5,18 +5,18 @@ from typing import Generator, Optional, List
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
-from app.core.config import DATABASE_URL
 from app.models.base import Base
 from app import models, schemas
 from app.database_drivers.base_driver import BaseDriver
 from app.core import security
+from app.core.config import settings 
 
 logger = logging.getLogger("app")  # Get logger for this module
 
 from app.core.database import SessionLocal
 
 class PostgresDriver(BaseDriver):
-    def __init__(self, db_url: str = DATABASE_URL):
+    def __init__(self, db_url: str = settings.DATABASE_URL):
         logger.debug(f"Initializing PostgresDriver with URL: {db_url}")
         self.engine = create_engine(db_url)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
