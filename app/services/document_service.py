@@ -115,7 +115,18 @@ class DocumentService:
         try:
             for file_data in gcs_files:
                 gcs_file_create = GCSFileCreate(**file_data)
-                   
+
+                # Check if the entry already exists
+                existing_gcs_file = self.db.query(GCSFile).filter(
+                    GCSFile.uri == gcs_file_create.uri,
+                    GCSFile.uri_id == uri_id,
+                    GCSFile.md5hash == gcs_file_create.md5hash
+                ).first()
+
+                if existing_gcs_file:
+                    logger.warning(f"GCS file entry already exists (uri: {gcs_file_create.uri}, uri_id: {uri_id}, md5hash: {gcs_file_create.md5hash}). Skipping insertion.")
+                    continue  # Skip to the next file
+                                   
                 # Create a new GCSFile object
                 db_gcs_file = GCSFile(
                     uri=gcs_file_create.uri,
