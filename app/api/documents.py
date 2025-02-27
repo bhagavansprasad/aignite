@@ -1,3 +1,5 @@
+# app/api/documents.py
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -53,6 +55,9 @@ async def ingest_documents(
         # Get the GCS metadata
         gcs_metadata = await document_service.process_gcs_uri(uri)
 
+        await document_service.create_gcs_file_entries(gcs_metadata["gcs_files"], uri_obj.id)
+        logger.info(f"Created GCS file entries for URI ID: {uri_obj.id}")
+        
         # Create a dictionary for the URI entry
         uri_entry_data = {
             "id": uri_obj.id,
@@ -75,7 +80,6 @@ async def ingest_documents(
             "gcs_metadata": gcs_metadata
         }
 
-        logger.info(f"gcs_metadata: {gcs_metadata}")
         return JSONResponse(content=response_data, status_code=status.HTTP_201_CREATED)
 
     except HTTPException as e:
