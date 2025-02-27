@@ -146,7 +146,26 @@ BEFORE UPDATE ON documents
 FOR EACH ROW
 EXECUTE PROCEDURE update_updated_at();
 
+-- Create the gcs_files table with the new schema
+CREATE TABLE gcs_files (
+    id SERIAL PRIMARY KEY,  -- Auto-incrementing primary key
+    uri VARCHAR(255) NOT NULL,  -- GCS object ID (renamed from id)
+    uri_id INTEGER NOT NULL,  -- Foreign key to URIs table
+    name VARCHAR(2048) NOT NULL,  -- File name with path
+    bucket VARCHAR(255) NOT NULL,  -- Bucket name
+    contenttype VARCHAR(255),  -- Content type
+    size BIGINT,  -- File size
+    md5hash VARCHAR(255),  -- MD5 hash
+    crc32c VARCHAR(255),  -- CRC32C checksum
+    etag VARCHAR(255),  -- ETag
+    timecreated TIMESTAMP,  -- Creation time
+    updated TIMESTAMP,  -- Last updated time
+    file_metadata TEXT,  -- Metadata (JSON)
+    CONSTRAINT fk_gcs_files_uris_id FOREIGN KEY (uri_id) REFERENCES uris(id) ON DELETE CASCADE
+);
 
+-- Optionally, create an index on the uri column
+CREATE INDEX idx_gcs_files_uri ON gcs_files (uri);
 
 -- Create index on tokens table
 CREATE INDEX idx_tokens_user_id ON tokens (user_id);
