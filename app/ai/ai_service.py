@@ -1,170 +1,118 @@
 # app/ai/ai_service.py
+
 import logging
-from typing import Dict, Optional
-
-import vertexai
-from vertexai.generative_models import GenerativeModel, GenerationConfig
-
-from app.core.config import settings  # Get Vertex AI initialization from config
-from app.ai.schemas.qa_response_schema import QAResponseSchema
-from app.ai.schemas.prompt_schema import PromptSchema
-from app.ai.schemas.llm_response_schema import LLMResponseSchema  # Assuming you have this
-from pydantic import ValidationError
-from app.core.config import settings 
+from app.ai.llm_connectors.openai_connector import OpenAIConnector
+from app.ai.llm_connectors.cohere_connector import CohereConnector
+from app.ai.llm_connectors.huggingface_connector import HuggingFaceConnector
+from app.ai.llm_connectors.vertexai_connector import VertexAIConnector
+from jinja2 import Environment, FileSystemLoader
+from typing import Optional, Dict, List
 import json
-import re
+from vertexai.generative_models import Part
+from vertexai.generative_models import Content
 
 logger = logging.getLogger("app")
 
-
 class AIService:
-    def __init__(self, model_name: str = settings.GEMINI_MODEL_NAME):
+    def __init__(self, config: dict):
+        self.config = config
+        self.llm_provider = config.get("llm_provider", "openai")
+        self.openai_config = config.get("openai", {})
+        self.cohere_config = config.get("cohere", {})
+        self.huggingface_config = config.get("huggingface", {})
+        self.vertexai_config = config.get("vertexai", {})  # Get Vertex AI config
+
+        self.llm_connector = self._create_llm_connector()
+
+        # Initialize Jinja2 environment for prompt templating
+        self.env = Environment(loader=FileSystemLoader("app/ai/prompts"))
+
+    def _create_llm_connector(self):
+        if self.llm_provider == "openai":
+            return OpenAIConnector(**self.openai_config)
+        elif self.llm_provider == "cohere":
+            return CohereConnector(**self.cohere_config)
+        elif self.llm_provider == "huggingface":
+            return HuggingFaceConnector(**self.huggingface_config)
+        elif self.llm_provider == "vertexai":
+            return VertexAIConnector(**self.vertexai_config)  # Create Vertex AI connector
+        else:
+            raise ValueError(f"Unsupported LLM provider: {self.llm_provider}")
+
+    def generate_text(self, prompt: str, max_output_tokens: int = 1024) -> Optional[str]:
         """
-        Initializes the AIService with a Gemini model from Vertex AI.
-        Ensure Vertex AI is initialized in app/core/config.py (or similar).
+        Generates text using the configured LLM connector.
         """
-        self.model_name = model_name
-        self.model = GenerativeModel(model_name)
-        logger.info(f"AIService initialized with Gemini model: {model_name}")
+        return self.llm_connector.generate_text(prompt, max_output_tokens)
 
-    async def generate_text(self, prompt: str, generation_config: dict = None) -> str:
+    def extract_document_details(self, document_uri: str, prompt_path: str = None) -> Optional[dict]:
         """
-        Generates text using the Gemini model.
-
-        Args:
-            prompt (str): The prompt for the LLM.
-            generation_config (dict, optional): Generation configuration parameters (e.g., temperature, max_output_tokens). Defaults to None.
-
-        Returns:
-            str: The generated text.
-        """
-        try:
-            # Set generation configuration
-            if generation_config is None:
-                generation_config = {
-                    "max_output_tokens": 2048,
-                    "temperature": 0.9,
-                    "top_p": 1
-                }
-
-            config = GenerationConfig(**generation_config)
-
-            response = self.model.generate_content(prompt, generation_config=config)
-            return response.text  # Access the text result
-
-        except Exception as e:
-            logger.exception(f"Error generating text with Gemini model: {e}")
-            raise  # Re-raise the exception
-
-
-    async def get_document_metadata(self, document_uri: str) -> Dict:
-        """
-        Gets metadata from the Gemini model based on document content.
-
-        Args:
-            document_uri (str): The URI of the document to analyze.
-
-        Returns:
-            Dict: A dictionary containing the extracted metadata. Returns an empty dictionary on error.
-        """
-        prompt = f"""
-        Extract the following information from the document at this URI: {document_uri}
-        If any information is not found, return null for that value.
-
-        Return a valid JSON object:
-        {{
-            "subject": "...",
-            "author": "...",
-            "class": "...",
-            "sections": ...,
-            "chapters": ...
-        }}
+        Extracts document details using the Gemini model, a base prompt template, and an optional supplemental prompt template in a chat session.
         """
         try:
-            response = await self.generate_text(prompt)
-
-            # Strip the ```json and ``` from the response, use re
-            json_string = re.search(r"\{[\s\S]*\}", response)
-
-            #Extract json content or response as is
-            if json_string:
-                json_string = json_string.group(0)
-            else:
-                logger.error(f"String Not Json")
-                return {}
-
-            try:
-                metadata = json.loads(json_string)
-                return metadata
-
-            except json.JSONDecodeError as e:
-                logger.error(f"Error decoding JSON from Gemini response: {e}")
-                return {}  # Handle the error
-
-        except Exception as e:
-            logger.exception(f"Error getting document metadata: {e}")
-            return {}
-    
-
-    async def generate_qa(self, qa_prompt: PromptSchema) -> Optional[QAResponseSchema]:
-        """
-        Generates a question and answer pair using the Gemini model based on the provided prompt.
-
-        Args:
-            qa_prompt (PromptSchema): A PromptSchema object containing the prompt information.
-
-        Returns:
-            Optional[QAResponseSchema]: A QAResponseSchema object containing the question and answer, or None if an error occurs.
-        """
-        try:
-            # Construct the full prompt from PromptSchema object
-            full_prompt = qa_prompt.prompt
-
-            # Generate text using the Gemini model
-            llm_response = await self.generate_text(full_prompt)
-
-            # Create a LLMResponseSchema object
-            llm_response_schema = LLMResponseSchema(response=llm_response)
-
-            # Parse the llm_response and create QAResponseSchema object
-            qa_response = self.parse_qa_response(llm_response_schema)
-
-            return qa_response
-
-        except Exception as e:
-            logger.exception(f"Error generating Q&A: {e}")
-            return None
-
-
-    def parse_qa_response(self, llm_response: LLMResponseSchema) -> Optional[QAResponseSchema]:
-        """
-        Parses the Gemini model response and extracts question and answer.
-
-        Args:
-            llm_response (LLMResponseSchema): An LLMResponseSchema object containing the LLM response.
-
-        Returns:
-            Optional[QAResponseSchema]: A QAResponseSchema object containing the parsed question and answer, or None if an error occurs.
-        """
-        try:
-            # Basic parsing logic (improve as needed)
-            response_text = llm_response.response
-            parts = response_text.split("\n", 1)  # Split into question and answer
-
-            if len(parts) == 2:
-                question = parts[0].split(":", 1)[1].strip() if ":" in parts[0] else parts[0].strip()
-                answer = parts[1].split(":", 1)[1].strip() if ":" in parts[1] else parts[1].strip()
-
-                # Create a QAResponseSchema object
-                qa_response = QAResponseSchema(question=question, answer=answer)
-                return qa_response
-            else:
-                logger.warning(f"Could not parse Q&A from Gemini response: {response_text}")
+            # Get the VertexAI Connector
+            if self.llm_provider != "vertexai":
+                logger.error("extract_document_details with chat requires vertexai llm provider")
                 return None
 
-        except ValidationError as e:
-            logger.error(f"Pydantic validation error: {e}")
-            return None
+            vertexai_connector = self.llm_connector
+            if not isinstance(vertexai_connector, VertexAIConnector):
+                logger.error("Invalid llm connector type, VertexAIConnector required")
+                return None
+
+            # Load the base prompt template
+            template = self.env.get_template("extract_document_details_prompt.txt")
+            base_prompt = template.render(document_uri=document_uri)
+
+            # Initialize the chat session
+            chat = vertexai_connector.model.start_chat()
+
+            contents = [
+                Part.from_uri(document_uri, mime_type="application/pdf"),
+                Part.from_text(base_prompt)
+            ]
+
+            # Send the message to the chat session
+            response = chat.send_message(Content(role="user", parts=contents))
+
+            llm_output = response.text.strip()
+
+            if not llm_output:
+                logger.warning(f"Failed to extract details from document: {document_uri}")
+                return None
+
+            llm_output = self.clean_llm_output(llm_output)
+
+            try:
+                extracted_details = json.loads(llm_output)
+                # logger.debug(json.dumps(extracted_details, sort_keys=True, indent=4))
+                logger.debug(f"Extracted details: {llm_output}")
+            except json.JSONDecodeError as e:
+                logger.error(f"Error decoding JSON: {e}\nLLM Output: {llm_output}")
+                return None
+
+            logger.info(f"Extracted details from document: {document_uri}")
+            return extracted_details
+
         except Exception as e:
-            logger.exception(f"Error parsing Q&A: {e}")
+            logger.error(f"Error extracting document details: {e}")
             return None
+
+    def generate_text_from_image(self, prompt: str, image_uri: str, max_output_tokens: int = 1024) -> Optional[str]:
+        """
+        Generates text using the configured LLM connector.
+        """
+        return self.llm_connector.generate_text_from_image(prompt, image_uri, max_output_tokens)
+
+    def clean_llm_output(self, llm_output: str) -> str:
+        """
+        Cleans the LLM output by removing any leading/trailing whitespace and ```json blocks.
+        """
+        llm_output = llm_output.strip()
+        # Remove ```json and ``` if present
+        if llm_output.startswith("```json"):
+            llm_output = llm_output[len("```json"):].strip()
+        if llm_output.endswith("```"):
+            llm_output = llm_output[:-len("```")].strip()
+        return llm_output
+    

@@ -11,6 +11,10 @@ import logging
 from fastapi.responses import JSONResponse
 from typing import Dict, List
 from datetime import datetime
+from app.models.gcs_file import GCSFile
+from datetime import datetime, timedelta
+from app.ai.ai_service import AIService  
+from app.core.config import settings  
 
 logger = logging.getLogger("app")
 
@@ -31,7 +35,7 @@ async def ingest_documents(
     """
     logger.info(f"User {current_user.email} is ingesting documents from URI: {uri}")
 
-    document_service = DocumentService(db)
+    document_service = DocumentService(db, "vertexai")
     try:
         # Create the URI entry in the database
         uri_obj = await document_service.create_uri_entry(
@@ -119,4 +123,54 @@ async def ingest_documents(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error processing GCS metadata."
+        )
+
+
+@router.post("/documents/{gcs_file_id}/process", status_code=status.HTTP_200_OK)
+async def process_document(
+    gcs_file_id: str,  # gcs_files.id is a string
+    db: Session = Depends(get_db),
+    current_user: user_schemas.User = Depends(check_role("process_document")),  # Adjust permission as needed
+    ai_service: AIService = Depends(lambda: AIService(settings.ai)) # Inject AIService
+):
+    """
+    Processes a specific document if it hasn't been updated in the last day.
+    """
+    logger.info(f"User {current_user.email} is attempting to process document with ID: {gcs_file_id}")
+
+    document_service = DocumentService(db, ai_service) # Pass ai_service to DocumentService
+
+    try:
+        # Get the GCSFile object from the database
+        gcs_file: GCSFile = db.query(GCSFile).filter(GCSFile.id == gcs_file_id).first()
+
+        if not gcs_file:
+            logger.warning(f"GCS file with ID {gcs_file_id} not found.")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="GCS file not found")
+
+        # Check if the document has been updated in the last day
+        if gcs_file.updated and gcs_file.updated > datetime.utcnow() - timedelta(days=1):
+            logger.info(f"GCS file with ID {gcs_file_id} was updated less than a day ago. Skipping processing.")
+            return {"message": "Document already processed recently"}
+
+        # Process the document
+        prompt_path = "app/ai/prompts/extract_document_details_prompt.txt"
+        result = await document_service.process_document(gcs_file, prompt_path)
+
+        # Update the 'updated' timestamp
+        gcs_file.updated = datetime.utcnow()
+        db.commit()
+        logger.info(f"Successfully processed document with ID: {gcs_file_id}")
+
+        return {"message": "Document processed successfully", "result": result}
+
+    except HTTPException as e:
+        logger.error(f"Error processing document: {e.detail}")
+        raise
+    except Exception as e:
+        logger.exception(f"Unexpected error processing document: {e}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error processing document"
         )

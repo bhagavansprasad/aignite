@@ -10,14 +10,16 @@ from app.schemas.gcs_file_schemas import GCSFileCreate
 from typing import List
 from sqlalchemy.exc import IntegrityError
 from google.cloud import storage
+from app.ai.ai_service import AIService
 
 logger = logging.getLogger("app")
 
 class DocumentService:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, ai_service: AIService):
         self.db = db
+        self.ai_service = ai_service
         logger.debug("DocumentService initialized")
-
+        
     async def create_uri_entry(self, uri: str, user_id: int, created_by_system: str = None, metadata: dict = None):  # Add metadata parameter
         """Creates a URI entry in the database."""
         logger.info(f"Creating URI entry for uri: {uri}, user_id: {user_id}, created_by_system: {created_by_system}, metadata: {metadata}") # Log input parameters
@@ -155,4 +157,34 @@ class DocumentService:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Error creating GCS file entry."
+            )
+
+    async def process_document(self, gcs_file: str, prompt_path: str):
+        """
+        Processes a GCS file (e.g., extracts text, analyzes content).
+        """
+        logger.info(f"Processing GCS file: {gcs_file}")
+
+        try:
+            gcs_uri = f"gs://{gcs_file.bucket}/{gcs_file.name}"
+            logger.debug(f"Constructed GCS URI: {gcs_uri}")
+
+            # Extract document details using the AIService
+            extracted_details = self.ai_service.extract_document_details(gcs_uri, prompt_path) 
+
+            if not extracted_details:
+                logger.warning(f"Failed to extract details from document: {gcs_uri}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to extract document details"
+                )
+
+            logger.info(f"Successfully processed GCS file: {gcs_uri}")
+            return extracted_details
+
+        except Exception as e:
+            logger.exception(f"Error processing GCS file: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error processing document: {e}"
             )

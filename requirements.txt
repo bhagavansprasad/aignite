@@ -14,3 +14,7 @@ PyMuPDF
 google-cloud-storage
 pydantic-settings
 vertexai
+cohere 
+transformers 
+openai
+jinja2
