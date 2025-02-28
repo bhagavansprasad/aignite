@@ -8,10 +8,12 @@ from app.schemas.uris_schemas import URIResponse, URICreate
 from app.models.gcs_file import GCSFile
 from app.schemas.gcs_file_schemas import GCSFileCreate
 from typing import List
+from typing import List, Dict, Any 
 from sqlalchemy.exc import IntegrityError
 from google.cloud import storage
 from app.ai.ai_service import AIService
 from app.models.document_details import DocumentDetails
+from app.schemas.doc_list_schemas import DocListResponse
 
 logger = logging.getLogger("app")
 
@@ -224,4 +226,59 @@ class DocumentService:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error processing document: {e}"
-            )            
+            )
+
+    async def get_all_uris(self) -> List[URIResponse]:
+        """
+        Retrieves a list of all URIs from the database.
+        """
+        logger.info("Retrieving a list of all URIs from the database.")
+        try:
+            uris = self.db.query(URI).all()
+            # Convert the SQLAlchemy objects to URIResponse objects, formatting datetime and ensuring metadata is a dict
+            uri_responses = []
+            for uri in uris:
+                uri_data: Dict[str, Any] = {  # Specify types for uri_data
+                    "id": uri.id,
+                    "uri": uri.uri,
+                    "user_id": uri.user_id,
+                    "created_at": uri.created_at.isoformat() if uri.created_at else None,
+                    "last_processed_at": uri.last_processed_at.isoformat() if uri.last_processed_at else None,
+                    "status": uri.status,
+                    "error_message": uri.error_message,
+                    "created_by_system": uri.created_by_system,
+                    "metadata": uri.metadata if isinstance(uri.metadata, dict) else {},  # Ensure metadata is a dict
+                }
+                uri_responses.append(URIResponse(**uri_data))
+
+            logger.debug(f"Retrieved {len(uris)} URIs.")
+            return uri_responses
+        except Exception as e:
+            logger.exception(f"Error retrieving URIs: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error retrieving URIs"
+            )
+
+    async def get_doc_list(self) -> List[DocListResponse]:
+        """
+        Retrieves a list of documents with their names, subjects, and extracted data.
+        """
+        logger.info("Retrieving a list of documents with their names, subjects, and extracted data.")
+        try:
+            # Join the gcs_files and document_details tables
+            doc_list = self.db.query(GCSFile.name, DocumentDetails.subject, DocumentDetails.extracted_data).join(
+                DocumentDetails, GCSFile.id == DocumentDetails.gcs_file_id
+            ).all()
+
+            # Convert the results to a list of DocListResponse objects
+            doc_list_response = [DocListResponse(name=name, subject=subject, extracted_data=extracted_data) for name, subject, extracted_data in doc_list]
+
+            logger.debug(f"Retrieved {len(doc_list_response)} documents with details.")
+            return doc_list_response
+        except Exception as e:
+            logger.exception(f"Error retrieving document list: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error retrieving document list"
+            )

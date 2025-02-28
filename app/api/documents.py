@@ -16,7 +16,8 @@ from datetime import datetime, timedelta
 from app.ai.ai_service import AIService  
 from app.core.config import settings  
 from app.models.document_details import DocumentDetails
-from app.schemas.document_details_schemas import DocumentDetailsCreate, DocumentDetailsResponse
+from app.schemas.document_details_schemas import DocumentDetailsResponse
+from app.schemas.doc_list_schemas import DocListResponse 
 
 logger = logging.getLogger("app")
 
@@ -127,6 +128,18 @@ async def ingest_documents(
             detail="Error processing GCS metadata."
         )
 
+@router.get("/documents/", response_model=List[URIResponse])
+async def list_documents(
+    db: Session = Depends(get_db),
+    current_user: user_schemas.User = Depends(check_role("list_documents"))  # Optional: Add a permission check
+):
+    """
+    Retrieve a list of all ingested documents (URIs).
+    """
+    logger.info(f"User {current_user.email} is requesting a list of all ingested documents.")
+    document_service = DocumentService(db, None)  # Pass None for ai_service as it's not needed here
+    uris = await document_service.get_all_uris()
+    return uris
 
 @router.post("/documents/{gcs_file_id}/process", status_code=status.HTTP_200_OK)
 async def process_document(
@@ -178,7 +191,11 @@ async def process_document(
         )
 
 @router.get("/document_details/{document_details_id}", response_model=DocumentDetailsResponse)
-def get_document_details(document_details_id: int, db: Session = Depends(get_db)):
+def get_document_details(
+    document_details_id: int, 
+    db: Session = Depends(get_db),
+    current_user: user_schemas.User = Depends(check_role("get_document_details")),
+):
     """
     Retrieves document details by ID.
     """
@@ -188,3 +205,16 @@ def get_document_details(document_details_id: int, db: Session = Depends(get_db)
     if not document_details:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document details not found")
     return document_details
+
+@router.get("/doc_list/", response_model=List[DocListResponse])
+async def get_doc_list(
+    db: Session = Depends(get_db),
+    current_user: user_schemas.User = Depends(check_role("get_doc_list"))
+):
+    """
+    Retrieve a list of documents with their names, subjects, and extracted data.
+    """
+    logger.info(f"User {current_user.email} is requesting a list of documents with details.")
+    document_service = DocumentService(db, None) 
+    doc_list = await document_service.get_doc_list()
+    return doc_list
