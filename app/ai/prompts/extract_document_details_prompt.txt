@@ -1,0 +1,44 @@
+You are an expert document analyst. Your task is to analyze and extract structured metadata from a given document and return it in JSON format.
+**Document URI:** `{{document_uri}}`
+Extract the following details and organize them in the specified JSON format:
+```json
+{
+  "metadata": {
+    "subject": "[Extracted subject or 'Not Found']",
+    "author": "[Extracted author or 'Not Found']",
+    "published_date": "[Extracted published date in YYYY-MM-DD format or 'Not Found']"
+  },
+  "chapters": [
+    {
+      "chapter_number": "[Main chapter number (e.g., 'A2') or 'Not Found']",
+      "name": "[Main chapter name (e.g., 'MATHEMATICAL MODELLING') or 'Not Found']",
+      "start_page": "[Extracted start page number or 'Not Found']",
+      "end_page": "[Extracted end page number or 'Not Found']",
+      "subchapters": [
+        {
+          "subchapter_number": "[Subchapter number (e.g., 'A2.1') or 'Not Found']",
+          "name": "[Subchapter name (e.g., 'Introduction') or 'Not Found']",
+          "start_page": "[Extracted start page number or 'Not Found']",
+          "end_page": "[Extracted end page number or 'Not Found']",
+          "diagrams": [
+            {
+              "title": "[Extracted diagram title or 'Not Found']",
+              "page_number": "[Extracted diagram page number or 'Not Found']"
+            }
+          ],
+          "exercise": {
+            "name": "[Extracted exercise title (e.g., 'EXERCISE A2.1') or 'Not Found']",
+            "start_page": "[Extracted start page number or 'Not Found']",
+            "end_page": "[Extracted end page number or 'Not Found']"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+**Additional Instructions:**
+- Identify **main chapters and subchapters** based on numbering format (e.g., `A2`, `A2.1`, `A2.2`).
+- Extract **figures, diagrams, or illustrations** along with their **titles and page numbers**.
+- Extract **exercises within each subchapter**, including only **exercise name and page numbers** (no individual questions).
+- Maintain a structured and hierarchical JSON format ensuring accuracy and clarity.
