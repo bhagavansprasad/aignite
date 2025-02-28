@@ -110,22 +110,17 @@ CREATE TABLE uris (
 CREATE INDEX idx_uris_user_id ON uris (user_id);
 
 -- Table: documents
-CREATE TABLE documents (
+CREATE TABLE document_details (
     id SERIAL PRIMARY KEY,
-    uri_id INTEGER NOT NULL,
-    bucket VARCHAR(255) NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    size BIGINT NOT NULL,
-    last_modified TIMESTAMP WITH TIME ZONE NOT NULL,
-    content_type VARCHAR(255),
-    e_tag VARCHAR(255),
-    indexed BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (uri_id) REFERENCES uris(id),
-    CONSTRAINT fk_documents_uri_id  -- Explicitly name the constraint
-      FOREIGN KEY (uri_id) REFERENCES uris(id) ON DELETE CASCADE   -- Use ON DELETE CASCADE here.
+    gcs_file_id INTEGER NOT NULL,
+    subject VARCHAR(255),
+    extracted_data JSONB,  -- Stores the JSON with subject, chapter names, and subchapter names
+    full_metadata JSONB,   -- Stores the entire JSON object (result)
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'utc'),
+    updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'utc'),
+    FOREIGN KEY (gcs_file_id) REFERENCES gcs_files(id) ON DELETE CASCADE
 );
+CREATE INDEX idx_document_details_gcs_file_id ON document_details (gcs_file_id);
 
 -- Index on bucket and key for faster lookups
 CREATE INDEX idx_documents_bucket_key ON documents (bucket, key);

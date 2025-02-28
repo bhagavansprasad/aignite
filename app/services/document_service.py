@@ -11,6 +11,7 @@ from typing import List
 from sqlalchemy.exc import IntegrityError
 from google.cloud import storage
 from app.ai.ai_service import AIService
+from app.models.document_details import DocumentDetails
 
 logger = logging.getLogger("app")
 
@@ -159,9 +160,30 @@ class DocumentService:
                 detail="Error creating GCS file entry."
             )
 
-    async def process_document(self, gcs_file: str, prompt_path: str):
+            
+    def _extract_document_details(self, result: dict) -> dict:
+        """Extracts specific document details from the AI result."""
+        logger.info("Extracting specific document details from AI result")
+        try:
+            subject = result.get("metadata", {}).get("subject")
+            chapters = result.get("chapters", [])
+            chapter_details = []
+
+            for chapter in chapters:
+                chapter_name = chapter.get("name")
+                subchapter_names = [subchapter.get("name") for subchapter in chapter.get("subchapters", [])]
+                chapter_details.append({"name": chapter_name, "subchapters": subchapter_names})
+
+            extracted_data = {"subject": subject, "chapters": chapter_details}
+            logger.debug(f"Extracted data: {extracted_data}")
+            return extracted_data
+        except Exception as e:
+            logger.error(f"Error extracting document details: {e}")
+            return {}
+
+    async def process_document(self, gcs_file: GCSFile, prompt_path: str):
         """
-        Processes a GCS file (e.g., extracts text, analyzes content).
+        Processes a GCS file, extracts metadata, and stores it in the database.
         """
         logger.info(f"Processing GCS file: {gcs_file}")
 
@@ -170,7 +192,7 @@ class DocumentService:
             logger.debug(f"Constructed GCS URI: {gcs_uri}")
 
             # Extract document details using the AIService
-            extracted_details = self.ai_service.extract_document_details(gcs_uri, prompt_path) 
+            extracted_details = self.ai_service.extract_document_details(gcs_uri, prompt_path)
 
             if not extracted_details:
                 logger.warning(f"Failed to extract details from document: {gcs_uri}")
@@ -179,12 +201,27 @@ class DocumentService:
                     detail="Failed to extract document details"
                 )
 
-            logger.info(f"Successfully processed GCS file: {gcs_uri}")
-            return extracted_details
+            # Extract specific document details
+            extracted_data = self._extract_document_details(extracted_details)
+
+            # Create a DocumentDetails object
+            db_document_details = DocumentDetails(
+                gcs_file_id=gcs_file.id,
+                subject=extracted_data.get("subject"),
+                extracted_data=extracted_data,
+                full_metadata=extracted_details,
+            )
+            self.db.add(db_document_details)
+            self.db.commit()
+            self.db.refresh(db_document_details)
+
+            logger.info(f"Successfully processed GCS file and stored details in the database. Document Details ID: {db_document_details.id}")
+            return extracted_details  # Or return db_document_details if you want the database object
 
         except Exception as e:
+            self.db.rollback()
             logger.exception(f"Error processing GCS file: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error processing document: {e}"
-            )
+            )            

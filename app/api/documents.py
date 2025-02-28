@@ -15,6 +15,8 @@ from app.models.gcs_file import GCSFile
 from datetime import datetime, timedelta
 from app.ai.ai_service import AIService  
 from app.core.config import settings  
+from app.models.document_details import DocumentDetails
+from app.schemas.document_details_schemas import DocumentDetailsCreate, DocumentDetailsResponse
 
 logger = logging.getLogger("app")
 
@@ -174,3 +176,15 @@ async def process_document(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error processing document"
         )
+
+@router.get("/document_details/{document_details_id}", response_model=DocumentDetailsResponse)
+def get_document_details(document_details_id: int, db: Session = Depends(get_db)):
+    """
+    Retrieves document details by ID.
+    """
+    
+    logger.info(f"In get_document_details document_details_id :{document_details_id}")
+    document_details = db.query(DocumentDetails).filter(DocumentDetails.gcs_file_id == document_details_id).first()
+    if not document_details:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document details not found")
+    return document_details
