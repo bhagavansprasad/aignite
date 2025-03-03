@@ -1,3 +1,5 @@
+# app/api/auth.py
+
 from fastapi import APIRouter, Depends, HTTPException, Form
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -11,9 +13,9 @@ import logging
 from app.core.config import settings 
 from pdbwhereami import whereami
 
-router = APIRouter()
+auth_router = APIRouter()
 
-@router.post("/login")
+@auth_router.post("/login")
 def login(
     username: str = Form(...),
     password: str = Form(...),
@@ -67,7 +69,7 @@ def login(
     }
 
 
-@router.post("/logout")
+@auth_router.post("/logout")
 async def logout(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)

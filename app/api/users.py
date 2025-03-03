@@ -11,11 +11,12 @@ from app.database_drivers.base_driver import BaseDriver
 from app.core.database import get_db
 from app.services import user_service
 from app.core.security import check_role
-router = APIRouter()
+
+users_router = APIRouter()
 
 logger = logging.getLogger("app") 
 
-@router.get("/detailed", response_model=List[schemas.User])
+@users_router.get("/detailed", response_model=List[schemas.User])
 async def detailed_list_users(
     skip: int = 0,
     limit: int = 100,
@@ -28,7 +29,7 @@ async def detailed_list_users(
     return [schemas.User.model_validate(user) for user in users]
 
 
-@router.get("/user_roles", response_model=List[UserRoleListResponse]) 
+@users_router.get("/user_roles", response_model=List[UserRoleListResponse]) 
 async def list_user_roles(
     skip: int = 0,
     limit: int = 100,
@@ -43,7 +44,7 @@ async def list_user_roles(
 
     return user_list
 
-@router.get("/", response_model=List[UsersListResponse]) 
+@users_router.get("/", response_model=List[UsersListResponse]) 
 async def list_users(
     skip: int = 0,
     limit: int = 100,
@@ -59,7 +60,7 @@ async def list_users(
     return user_list
 
 
-@router.post("/", response_model=schemas.User)
+@users_router.post("/", response_model=schemas.User)
 def create_user(
     user: schemas.UserCreate, 
     db: Session = Depends(get_db),

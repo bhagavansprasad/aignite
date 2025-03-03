@@ -1,0 +1,15 @@
+app/api/router.py
+app/main.py
+app/api/router.py
+app/core/config.py
+app/api/users.py
+app/api/documents.py
+app/models/document_details.py
+app/models/gcs_file.py
+app/models/uris.py
+app/schemas/doc_list_schemas.py
+app/schemas/document_details_schemas.py
+app/schemas/gcs_file_schemas.py
+app/schemas/uris_schemas.py
+app/services/document_service.py
+

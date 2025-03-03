@@ -6,10 +6,12 @@ from typing import Optional
 
 class Settings(BaseSettings):
     DATABASE_URL: str = os.environ.get("DATABASE_URL", "postgresql://bhagavan:jnjnuh@localhost/aignite_db")
+    TEST_DATABASE_URL: str = os.environ.get("TEST_DATABASE_URL", "postgresql://bhagavan:jnjnuh@localhost/aignite_db_test")
+    SERVER_URL: str = os.environ.get("BACKEND_SERVER_URL", "http://localhost:8000")
+    
     ALLOWED_HOSTS: list[str] = ["*"]
     SECRET_KEY: str = "aignite-secret-key"
     ALGORITHM: str = "HS256"
-    TEST_DATABASE_URL: str = os.environ.get("TEST_DATABASE_URL", "postgresql://bhagavan:jnjnuh@localhost/aignite_db_test")
     MEDIA_ROOT: str = "app/media"
 
     # AI Configuration
