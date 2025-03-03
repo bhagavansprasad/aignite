@@ -1,0 +1,1011 @@
+Here is the context of the source tree and the files:
+Store the context.  Based the context I will be asking questions Later
+# Source Tree
+.
+├── Makefile
+├── README.md
+├── app
+│   ├── __init__.py
+│   ├── ai
+│   │   ├── __init__.py
+│   │   ├── ai_extract_docs_details.py
+│   │   ├── ai_service.py
+│   │   ├── llm_connectors
+│   │   │   ├── __init__.py
+│   │   │   ├── cohere_connector.py
+│   │   │   ├── huggingface_connector.py
+│   │   │   ├── openai_connector.py
+│   │   │   └── vertexai_connector.py
+│   │   ├── models
+│   │   │   └── __init__.py
+│   │   ├── prompts
+│   │   │   ├── __init__.py
+│   │   │   └── extract_document_details_prompt.txt
+│   │   ├── schemas
+│   │   │   └── __init__.py
+│   │   └── services
+│   │       └── __init__.py
+│   ├── api
+│   │   ├── __init__.py
+│   │   ├── auth.py
+│   │   ├── documents.py
+│   │   ├── router.py
+│   │   └── users.py
+│   ├── core
+│   │   ├── __init__.py
+│   │   ├── base.py
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   ├── logging_config.py
+│   │   └── security.py
+│   ├── database_drivers
+│   │   ├── __init__.py
+│   │   ├── base_driver.py
+│   │   └── postgres_driver.py
+│   ├── main.py
+│   ├── media
+│   │   ├── __init__.py
+│   │   ├── assessment_reports
+│   │   ├── documents
+│   │   ├── recommendation_outputs
+│   │   └── user_profiles
+│   ├── models
+│   │   ├── __init__.py
+│   │   ├── base.py
+│   │   ├── document_details.py
+│   │   ├── endpoint_role.py
+│   │   ├── gcs_file.py
+│   │   ├── roles.py
+│   │   ├── tokens.py
+│   │   ├── uris.py
+│   │   └── users.py
+│   ├── schemas
+│   │   ├── __init__.py
+│   │   ├── doc_list_schemas.py
+│   │   ├── document_details_schemas.py
+│   │   ├── gcs_file_schemas.py
+│   │   ├── uris_schemas.py
+│   │   └── user_schemas.py
+│   ├── services
+│   │   ├── __init__.py
+│   │   ├── document_service.py
+│   │   └── user_service.py
+│   └── static
+│       ├── __init__.py
+│       ├── images
+│       ├── pdfs
+│       └── reports
+├── conftest.py
+├── context.txt
+├── docs
+│   ├── 01-phases.txt
+│   ├── aignite-ppt.txt
+│   ├── database-insert.sql
+│   ├── database-tables-creation.sql
+│   ├── database_schema.md
+│   ├── prompts
+│   │   ├── 01-db-tables-creation.prompt
+│   │   ├── 02-db-data-insert.prompt
+│   │   ├── 03-framework-source-tree.prompt
+│   │   ├── 04-gen_endpoints-auth-author.prompt
+│   │   ├── 05-db-connectivity.prompt
+│   │   └── 06-auth-author.prompt
+│   ├── source-tree-create-shscript.sh
+│   └── usecases
+│       ├── 01-KnowledgeBase-AI-Chatbot.puml
+│       ├── sequece-flow
+│       │   └── Phase01-Step01.puml
+│       └── usecase-list.md
+├── logs
+├── pytest.ini
+├── requirements.txt
+└── tests
+    ├── __init__.py
+    ├── test_api
+    │   ├── test_auth.py
+    │   └── test_users.py
+    ├── test_db_manager
+    │   └── test_db_connection.py
+    └── utils
+        ├── config.json
+        ├── context-files.txt
+        ├── gen-context.sh
+        ├── get_token.py
+        └── utils.py
+
+31 directories, 79 files
+
+# app/api/router.py
+from fastapi import APIRouter
+from app.api.users import users_router
+from app.api.auth import auth_router 
+from app.api.documents import documents_router
+
+api_router = APIRouter()
+api_router.include_router(users_router, prefix="/users", tags=["Users"])
+api_router.include_router(auth_router, prefix="/auth", tags=["Authentication"])
+api_router.include_router(documents_router, prefix="/documents", tags=["Documents"])
+
+# app/main.py
+import logging
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
+from app.core.logging_config import configure_logging
+from app.core.database import get_db, engine, Base
+from app.core import security
+from app.api.router import api_router
+
+
+# Initialize logging configuration
+configure_logging()
+
+logger = logging.getLogger("app")
+
+app = FastAPI()
+Base.metadata.create_all(bind=engine)
+
+# --- Database Initialization (Startup Event) ---
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Starting up the application...")
+    db: Session = None  # Initialize db outside try block
+    try:
+        db = next(get_db())
+    except Exception as e:
+        logger.error(f"Error during startup: {e}")
+    finally:
+        if db:
+            db.close()
+    logger.info("Application startup tasks completed.")
+
+# --- CORS Configuration ---
+if settings.ALLOWED_HOSTS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[str(origin) for origin in settings.ALLOWED_HOSTS],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+# --- Register Routers (Combined Router) ---
+app.include_router(api_router, prefix="/api")
+
+logger.info("FastAPI application started.")
+
+# app/api/router.py
+from fastapi import APIRouter
+from app.api.users import users_router
+from app.api.auth import auth_router 
+from app.api.documents import documents_router
+
+api_router = APIRouter()
+api_router.include_router(users_router, prefix="/users", tags=["Users"])
+api_router.include_router(auth_router, prefix="/auth", tags=["Authentication"])
+api_router.include_router(documents_router, prefix="/documents", tags=["Documents"])
+
+# app/core/config.py
+# app/core/config.py
+
+import os
+from pydantic_settings import BaseSettings
+from typing import Optional
+
+class Settings(BaseSettings):
+    DATABASE_URL: str = os.environ.get("DATABASE_URL", "postgresql://bhagavan:jnjnuh@localhost/aignite_db")
+    TEST_DATABASE_URL: str = os.environ.get("TEST_DATABASE_URL", "postgresql://bhagavan:jnjnuh@localhost/aignite_db_test")
+    SERVER_URL: str = os.environ.get("BACKEND_SERVER_URL", "http://localhost:8000")
+    
+    ALLOWED_HOSTS: list[str] = ["*"]
+    SECRET_KEY: str = "aignite-secret-key"
+    ALGORITHM: str = "HS256"
+    MEDIA_ROOT: str = "app/media"
+
+    # AI Configuration
+    ai: dict = {
+        "llm_provider": "vertexai",
+        "vertexai": {
+            "project_id": os.environ.get("VERTEXAI_PROJECT_ID"),  # Replace with your Vertex AI project ID
+            "location": os.environ.get("VERTEXAI_LOCATION", "us-central1"),  # Replace with your Vertex AI location
+            "model_name": os.environ.get("GEMINI_MODEL_NAME", "gemini-1.5-pro-002")  #Moved Gemini model name here
+        },
+        "openai": {
+            "api_key": os.environ.get("OPENAI_API_KEY"),
+        },
+        "cohere": {
+            "api_key": os.environ.get("COHERE_API_KEY"),
+        },
+        "huggingface": {
+            "api_key": os.environ.get("HUGGINGFACE_API_KEY"),
+        }
+    }
+
+    class Config:
+        env_file = ".env"  # Load from .env file
+
+settings = Settings()
+# app/api/users.py
+# app/api/users.py
+import logging
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from app import schemas
+from app.schemas.user_schemas import UserRoleListResponse
+from app.schemas.user_schemas import UsersListResponse
+from app import models
+from app.database_drivers.base_driver import BaseDriver
+from app.core.database import get_db
+from app.services import user_service
+from app.core.security import check_role
+
+users_router = APIRouter()
+
+logger = logging.getLogger("app") 
+
+@users_router.get("/detailed", response_model=List[schemas.User])
+async def detailed_list_users(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: schemas.User = Depends(check_role("detailed_list_users"))
+):
+    logger.info("Reading users from the database (detailed).")
+    users = user_service.get_users(db, skip=skip, limit=limit)
+    logger.debug(f"Read {len(users)} users (detailed).")
+    return [schemas.User.model_validate(user) for user in users]
+
+
+@users_router.get("/user_roles", response_model=List[UserRoleListResponse]) 
+async def list_user_roles(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: schemas.User = Depends(check_role("list_user_roles"))
+):
+    logger.info("Reading users from the database (basic).")
+    users = user_service.get_users(db, skip=skip, limit=limit)
+    logger.debug(f"Read {len(users)} users (basic).")
+
+    user_list = [UserRoleListResponse(full_name=user.full_name, role_id=user.role_id) for user in users]
+
+    return user_list
+
+@users_router.get("/", response_model=List[UsersListResponse]) 
+async def list_users(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: schemas.User = Depends(check_role("list_users"))
+):
+    logger.info("Reading users from the database (basic).")
+    users = user_service.get_users(db, skip=skip, limit=limit)
+    logger.debug(f"Read {len(users)} users (basic).")
+
+    user_list = [UsersListResponse(full_name=user.full_name) for user in users]
+
+    return user_list
+
+
+@users_router.post("/", response_model=schemas.User)
+def create_user(
+    user: schemas.UserCreate, 
+    db: Session = Depends(get_db),
+    current_user: schemas.User = Depends(check_role("create_user"))
+):
+    """
+    Create a new user. No authentication required for this example.
+    """
+    logger.info(f"Creating a new user with email: {user.email}")
+    try:
+        db_user = user_service.create_user(db=db, user=user)
+        logger.info(f"Created a new user with email: {user.email}")
+        
+        return schemas.User.model_validate(db_user)
+    
+    except Exception as e:
+        logger.exception(f"Error creating user: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+# app/api/documents.py
+# app/api/documents.py
+
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.orm import Session
+from app.core.database import get_db
+from app.services.document_service import DocumentService
+from app.schemas.uris_schemas import URIResponse
+from app.core.security import check_role
+from app.schemas import user_schemas
+import logging
+from fastapi.responses import JSONResponse
+from typing import Dict, List
+from datetime import datetime
+from app.models.gcs_file import GCSFile
+from datetime import datetime, timedelta
+from app.ai.ai_service import AIService  
+from app.core.config import settings  
+from app.models.document_details import DocumentDetails
+from app.schemas.document_details_schemas import DocumentDetailsResponse
+from app.schemas.doc_list_schemas import DocListResponse 
+
+logger = logging.getLogger("app")
+
+documents_router = APIRouter()
+
+@documents_router.post("/documents/ingest/", status_code=status.HTTP_202_ACCEPTED)
+async def ingest_documents(
+    *,
+    uri: str = Query(..., description="GCS URI of the bucket"),
+    db: Session = Depends(get_db),
+    current_user: user_schemas.User = Depends(check_role("ingest_documents"))
+) -> JSONResponse:
+    """
+    Ingest documents from a GCS bucket.
+    - Adds an entry to the `uris` table.
+    - Returns a comprehensive message about the ingestion process.
+    - Requires 'ingest_documents' permission.
+    """
+    logger.info(f"User {current_user.email} is ingesting documents from URI: {uri}")
+
+    document_service = DocumentService(db, "vertexai")
+    try:
+        # Create the URI entry in the database
+        uri_obj = await document_service.create_uri_entry(
+            uri=uri,
+            user_id=current_user.id,
+            created_by_system=None,
+            metadata={}
+        )
+        logger.info(f"Created URI entry: {uri_obj.uri}")
+
+        # Update the URI status to "processing"
+        uri_obj.status = "processing"
+        db.commit()
+
+    except HTTPException as e:
+        logger.error(f"Error during URI creation: {e.detail}")
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.exception(f"Unexpected error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error creating URI entry."
+        )
+
+    try:
+        # Get the GCS metadata
+        gcs_metadata = await document_service.process_gcs_uri(uri)
+
+        # Create GCS file entries in the database
+        await document_service.create_gcs_file_entries(gcs_metadata["gcs_files"], uri_obj.id)
+        logger.info(f"Created GCS file entries for URI ID: {uri_obj.id}")
+
+        # Construct the simplified GCS metadata
+        simplified_gcs_files: List[Dict] = []
+        for file in gcs_metadata["gcs_files"]:
+            simplified_gcs_files.append({
+                "name": file["name"],
+                "bucket": file["bucket"],
+                "content_type": file["contenttype"],
+                "size": file["size"],
+                "created_at": file["timecreated"]
+            })
+
+        # Construct a dictionary for the URI entry
+        uri_entry_data = {
+            "id": uri_obj.id,
+            "uri": uri_obj.uri,
+            "user_id": uri_obj.user_id,
+            "created_at": uri_obj.created_at.isoformat() if uri_obj.created_at else None,  # Convert to string
+            "last_processed_at": uri_obj.last_processed_at.isoformat() if uri_obj.last_processed_at else None,  # Convert to string
+            "status": uri_obj.status,
+            "error_message": uri_obj.error_message,
+            "created_by_system": uri_obj.created_by_system,
+            "metadata": uri_obj.metadata if isinstance(uri_obj.metadata, dict) else {}  # Ensure it's a dictionary
+        }
+
+        # Validate the URI entry data using the URIResponse schema
+        uri_entry = URIResponse(**uri_entry_data)
+
+        # Construct the response data
+        response_data: Dict = {
+            "message": f"Document ingestion started for URI: {uri}. {len(gcs_metadata['gcs_files'])} documents found. Understanding of documents is in progress. Check the status endpoint for updates.",
+            "uri_entry": uri_entry.dict(),
+            "document_summary": {
+                "total_documents_found": len(gcs_metadata["gcs_files"]),
+                "processing_status": "In Progress",
+                "understanding_status": "In Progress",
+                "expected_completion": "A few minutes"
+            },
+            "gcs_metadata": {
+                "gcs_files": simplified_gcs_files
+            }
+        }
+
+        return JSONResponse(content=response_data, status_code=status.HTTP_202_ACCEPTED)
+
+    except HTTPException as e:
+        logger.error(f"Error during GCS metadata processing: {e.detail}")
+        db.rollback()
+        raise
+    except Exception as e:
+        logger.exception(f"Unexpected error during GCS metadata processing: {e}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error processing GCS metadata."
+        )
+
+@documents_router.get("/documents/", response_model=List[URIResponse])
+async def list_documents(
+    db: Session = Depends(get_db),
+    current_user: user_schemas.User = Depends(check_role("list_documents"))  # Optional: Add a permission check
+):
+    """
+    Retrieve a list of all ingested documents (URIs).
+    """
+    logger.info(f"User {current_user.email} is requesting a list of all ingested documents.")
+    document_service = DocumentService(db, None)  # Pass None for ai_service as it's not needed here
+    uris = await document_service.get_all_uris()
+    return uris
+
+@documents_router.post("/documents/{gcs_file_id}/process", status_code=status.HTTP_200_OK)
+async def process_document(
+    gcs_file_id: str,  # gcs_files.id is a string
+    db: Session = Depends(get_db),
+    current_user: user_schemas.User = Depends(check_role("process_document")),  # Adjust permission as needed
+    ai_service: AIService = Depends(lambda: AIService(settings.ai)) # Inject AIService
+):
+    """
+    Processes a specific document if it hasn't been updated in the last day.
+    """
+    logger.info(f"User {current_user.email} is attempting to process document with ID: {gcs_file_id}")
+
+    document_service = DocumentService(db, ai_service) # Pass ai_service to DocumentService
+
+    try:
+        # Get the GCSFile object from the database
+        gcs_file: GCSFile = db.query(GCSFile).filter(GCSFile.id == gcs_file_id).first()
+
+        if not gcs_file:
+            logger.warning(f"GCS file with ID {gcs_file_id} not found.")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="GCS file not found")
+
+        # Check if the document has been updated in the last day
+        if gcs_file.updated and gcs_file.updated > datetime.utcnow() - timedelta(days=1):
+            logger.info(f"GCS file with ID {gcs_file_id} was updated less than a day ago. Skipping processing.")
+            return {"message": "Document already processed recently"}
+
+        # Process the document
+        prompt_path = "app/ai/prompts/extract_document_details_prompt.txt"
+        result = await document_service.process_document(gcs_file, prompt_path)
+
+        # Update the 'updated' timestamp
+        gcs_file.updated = datetime.utcnow()
+        db.commit()
+        logger.info(f"Successfully processed document with ID: {gcs_file_id}")
+
+        return {"message": "Document processed successfully", "result": result}
+
+    except HTTPException as e:
+        logger.error(f"Error processing document: {e.detail}")
+        raise
+    except Exception as e:
+        logger.exception(f"Unexpected error processing document: {e}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error processing document"
+        )
+
+@documents_router.get("/document_details/{document_details_id}", response_model=DocumentDetailsResponse)
+def get_document_details(
+    document_details_id: int, 
+    db: Session = Depends(get_db),
+    current_user: user_schemas.User = Depends(check_role("get_document_details")),
+):
+    """
+    Retrieves document details by ID.
+    """
+    
+    logger.info(f"In get_document_details document_details_id :{document_details_id}")
+    document_details = db.query(DocumentDetails).filter(DocumentDetails.gcs_file_id == document_details_id).first()
+    if not document_details:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document details not found")
+    return document_details
+
+@documents_router.get("/doc_list/", response_model=List[DocListResponse])
+async def get_doc_list(
+    db: Session = Depends(get_db),
+    current_user: user_schemas.User = Depends(check_role("get_doc_list"))
+):
+    """
+    Retrieve a list of documents with their names, subjects, and extracted data.
+    """
+    logger.info(f"User {current_user.email} is requesting a list of documents with details.")
+    document_service = DocumentService(db, None) 
+    doc_list = await document_service.get_doc_list()
+    return doc_list
+
+# app/models/document_details.py
+# app/models/document_details.py
+
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON
+from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
+from app.core.database import Base
+from sqlalchemy.orm import Mapped, mapped_column
+from datetime import datetime
+
+class DocumentDetails(Base):
+    __tablename__ = "document_details"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    gcs_file_id: Mapped[int] = mapped_column(ForeignKey("gcs_files.id"), nullable=False)
+    subject: Mapped[str] = mapped_column(String(255), nullable=True)
+    extracted_data: Mapped[dict] = mapped_column(JSON, nullable=True)
+    full_metadata: Mapped[dict] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    gcs_file = relationship("GCSFile", backref="document_details") # Correct backref
+# app/models/gcs_file.py
+# app/models/gcs_file.py
+
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, BigInteger, Identity, JSON
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from app.core.database import Base
+from sqlalchemy.orm import Mapped, mapped_column
+from datetime import datetime
+
+
+class GCSFile(Base):
+    __tablename__ = "gcs_files"
+
+    id: Mapped[int] = mapped_column(Integer, Identity(), primary_key=True) # New primary key
+    uri: Mapped[str] = mapped_column(String(255), index=True)  # GCS object ID - Renamed from id
+    uri_id: Mapped[int] = mapped_column(ForeignKey("uris.id"), nullable=False)  # Foreign key to URIs
+    name: Mapped[str] = mapped_column(String(2048), nullable=False)  # File name with path
+    bucket: Mapped[str] = mapped_column(String(255), nullable=False)  # Bucket name
+    contenttype: Mapped[str] = mapped_column(String(255), nullable=True)  # Content type
+    size: Mapped[int] = mapped_column(BigInteger, nullable=True)  # File size
+    md5hash: Mapped[str] = mapped_column(String(255), nullable=True)  # MD5 hash
+    crc32c: Mapped[str] = mapped_column(String(255), nullable=True)  # CRC32C checksum
+    etag: Mapped[str] = mapped_column(String(255), nullable=True)  # ETag
+    timecreated: Mapped[datetime] = mapped_column(DateTime, nullable=True)  # Creation time
+    updated: Mapped[datetime] = mapped_column(DateTime, nullable=True)  # Last updated time
+    file_metadata: Mapped[dict] = mapped_column(JSON, nullable=True)  # Metadata (JSON)
+
+    uri_obj = relationship("URI", back_populates="gcs_files")  # Relationship with URIs table - Renamed to uri_obj
+    
+    
+    
+    
+# app/models/uris.py
+# app/models/uris.py
+
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from app.core.database import Base
+from typing import List, TYPE_CHECKING
+from sqlalchemy.orm import Mapped, mapped_column
+from datetime import datetime
+
+if TYPE_CHECKING:
+    from app.models.gcs_file import GCSFile
+
+class URI(Base):
+    __tablename__ = "uris"
+
+    id = Column(Integer, primary_key=True, index=True)
+    uri = Column(String(2048), unique=True, nullable=False)  # Keep as "uri"
+    user_id = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime, server_default=func.now())
+    last_processed_at = Column(DateTime)
+    status = Column(String(50), default="pending")
+    error_message = Column(Text, nullable=True)
+    created_by_system = Column(String(255), nullable=True)
+
+    user = relationship("User", back_populates="uris")
+    gcs_files: Mapped[List["GCSFile"]] = relationship("GCSFile", back_populates="uri_obj", cascade="all, delete-orphan")
+# app/schemas/doc_list_schemas.py
+# app/schemas/doc_list_schemas.py
+
+from pydantic import BaseModel
+from typing import Optional, Dict
+
+class DocListResponse(BaseModel):
+    name: str
+    subject: Optional[str] = None
+    extracted_data: Optional[Dict] = None
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+# app/schemas/document_details_schemas.py
+# app/schemas/document_details_schemas.py
+
+from pydantic import BaseModel
+from typing import Optional, Dict
+from datetime import datetime
+
+class DocumentDetailsCreate(BaseModel):
+    gcs_file_id: int
+    subject: Optional[str] = None
+    extracted_data: Optional[Dict] = None
+    full_metadata: Optional[Dict] = None
+
+class DocumentDetailsResponse(BaseModel):
+    id: int
+    gcs_file_id: int
+    subject: Optional[str] = None
+    extracted_data: Optional[Dict] = None
+    full_metadata: Optional[Dict] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+# app/schemas/gcs_file_schemas.py
+# app/schemas/gcs_file_schemas.py
+
+from pydantic import BaseModel
+from typing import Optional, Dict
+from datetime import datetime
+
+class GCSFileCreate(BaseModel):
+    uri: str  # Renamed from id
+    name: str
+    bucket: str
+    contenttype: Optional[str] = None
+    size: Optional[int] = None
+    md5hash: Optional[str] = None
+    crc32c: Optional[str] = None
+    etag: Optional[str] = None
+    timecreated: Optional[datetime] = None
+    updated: Optional[datetime] = None
+    file_metadata: Optional[Dict] = None  
+
+class GCSFileResponse(BaseModel):
+    id: int
+    uri: str  # Renamed from id
+    name: str
+    bucket: str
+    contenttype: Optional[str] = None
+    size: Optional[int] = None
+    md5hash: Optional[str] = None
+    crc32c: Optional[str] = None
+    etag: Optional[str] = None
+    timecreated: Optional[datetime] = None
+    updated: Optional[str] = None
+    file_metadata: Optional[Dict] = None
+    uri_id: int
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+        
+# app/schemas/uris_schemas.py
+# app/schemas/uris_schemas.py
+
+from pydantic import BaseModel
+from typing import Optional, Dict
+from datetime import datetime
+
+class URICreate(BaseModel):
+    uri: str
+    created_by_system: Optional[str] = None
+    metadata: Optional[Dict] = None 
+
+class URIResponse(BaseModel):
+    id: int
+    uri: str
+    user_id: Optional[int] = None
+    created_at: str
+    last_processed_at: Optional[str] = None
+    status: str
+    error_message: Optional[str] = None
+    created_by_system: Optional[str] = None
+    metadata: Optional[Dict] = None
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+# app/services/document_service.py
+# app/services/document_service.py
+
+import logging
+from sqlalchemy.orm import Session
+from fastapi import HTTPException, status
+from app.models.uris import URI
+from app.schemas.uris_schemas import URIResponse, URICreate
+from app.models.gcs_file import GCSFile
+from app.schemas.gcs_file_schemas import GCSFileCreate
+from typing import List
+from typing import List, Dict, Any 
+from sqlalchemy.exc import IntegrityError
+from google.cloud import storage
+from app.ai.ai_service import AIService
+from app.models.document_details import DocumentDetails
+from app.schemas.doc_list_schemas import DocListResponse
+
+logger = logging.getLogger("app")
+
+class DocumentService:
+    def __init__(self, db: Session, ai_service: AIService):
+        self.db = db
+        self.ai_service = ai_service
+        logger.debug("DocumentService initialized")
+        
+    async def create_uri_entry(self, uri: str, user_id: int, created_by_system: str = None, metadata: dict = None):  # Add metadata parameter
+        """Creates a URI entry in the database."""
+        logger.info(f"Creating URI entry for uri: {uri}, user_id: {user_id}, created_by_system: {created_by_system}, metadata: {metadata}") # Log input parameters
+        db_uri = URI(
+            uri=uri,
+            user_id=user_id,
+            created_by_system=created_by_system,
+            metadata=metadata
+        )
+        self.db.add(db_uri)
+        try:
+            logger.debug("Committing URI entry to database")
+            self.db.commit()
+            self.db.refresh(db_uri)
+            logger.info(f"Successfully created URI entry with id: {db_uri.id}")
+            return db_uri
+        except IntegrityError as e:
+            self.db.rollback()
+            logger.warning(f"URI entry already exists: {str(e)}")
+            existing_uri = self.db.query(URI).filter(URI.uri == uri).first()
+            if existing_uri:
+                logger.info(f"Returning existing URI entry with id: {existing_uri.id}")
+                return existing_uri
+            else:
+                logger.error("IntegrityError occurred, but could not retrieve existing URI.")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Error creating URI entry: {str(e)}"
+                )
+        except Exception as e:
+            self.db.rollback()
+            logger.exception(f"Unexpected error creating URI entry: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error creating URI entry: {str(e)}"
+            )
+
+    async def process_gcs_uri(self, uri: str) -> dict:
+        """Connects to GCS, lists files, and prepares metadata."""
+        logger.info(f"Processing GCS URI: {uri}")
+
+        if not uri.startswith("gs://"):
+            logger.warning(f"Invalid URI format: {uri}. URI must start with gs://")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="URI must start with gs://")
+
+        try:
+            bucket_name = uri.split('/')[2]
+            prefix = '/'.join(uri.split('/')[3:])
+            logger.debug(f"Extracted bucket_name: {bucket_name}, prefix: {prefix}")
+            storage_client = storage.Client()
+            bucket = storage_client.bucket(bucket_name)
+            blobs = bucket.list_blobs(prefix=prefix)
+
+            file_metadata_list = []
+            for blob in blobs:
+                if not blob.name.endswith('/'):
+                    # Convert datetime to ISO format string
+                    updated_str = blob.updated.isoformat() if blob.updated else None
+                    created_str = blob.time_created.isoformat() if blob.time_created else None
+                    metadata = blob.metadata if blob.metadata is not None else {}
+                    md5hash = blob.md5_hash if blob.md5_hash is not None else "" 
+
+                    file_metadata = {
+                        "uri": blob.id,
+                        "selfLink": blob.self_link,
+                        "name": blob.name,
+                        "bucket": blob.bucket.name,
+                        "contenttype": blob.content_type,
+                        "size": blob.size,
+                        "md5hash": md5hash,
+                        "crc32c": blob.crc32c,
+                        "etag": blob.etag,
+                        "timecreated": created_str,
+                        "updated": updated_str,
+                        "file_metadata": metadata,
+                    }
+                    file_metadata_list.append(file_metadata)
+                    logger.debug(f"Extracted metadata for file: {blob.name}")
+
+            metadata = {"gcs_files": file_metadata_list}
+            logger.info(f"Successfully processed GCS URI: {uri}")
+            return metadata
+
+        except Exception as e:
+            logger.exception(f"Error accessing GCS bucket: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error accessing GCS bucket: {str(e)}"
+            )
+
+    async def create_gcs_file_entries(self, gcs_files: List[dict], uri_id: int):
+        """Creates GCS file entries in the database."""
+        logger.info(f"Creating GCS file entries for URI ID: {uri_id}")
+
+        try:
+            for file_data in gcs_files:
+                gcs_file_create = GCSFileCreate(**file_data)
+
+                # Check if the entry already exists
+                existing_gcs_file = self.db.query(GCSFile).filter(
+                    GCSFile.uri == gcs_file_create.uri,
+                    GCSFile.uri_id == uri_id,
+                    GCSFile.md5hash == gcs_file_create.md5hash
+                ).first()
+
+                if existing_gcs_file:
+                    logger.warning(f"GCS file entry already exists (uri: {gcs_file_create.uri}, uri_id: {uri_id}, md5hash: {gcs_file_create.md5hash}). Skipping insertion.")
+                    continue  # Skip to the next file
+                                   
+                # Create a new GCSFile object
+                db_gcs_file = GCSFile(
+                    uri=gcs_file_create.uri,
+                    uri_id=uri_id,
+                    name=gcs_file_create.name,
+                    bucket=gcs_file_create.bucket,
+                    contenttype=gcs_file_create.contenttype,
+                    size=gcs_file_create.size,
+                    md5hash=gcs_file_create.md5hash,
+                    crc32c=gcs_file_create.crc32c,
+                    etag=gcs_file_create.etag,
+                    timecreated=gcs_file_create.timecreated,
+                    updated=gcs_file_create.updated,
+                    file_metadata=gcs_file_create.file_metadata,
+                )
+
+                self.db.add(db_gcs_file)
+                logger.debug(f"Added GCS file entry: {db_gcs_file.name}")
+
+            self.db.commit()
+            logger.info(f"Successfully created GCS file entries for URI ID: {uri_id}")
+
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Error creating GCS file entries: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error creating GCS file entry."
+            )
+
+            
+    def _extract_document_details(self, result: dict) -> dict:
+        """Extracts specific document details from the AI result."""
+        logger.info("Extracting specific document details from AI result")
+        try:
+            subject = result.get("metadata", {}).get("subject")
+            chapters = result.get("chapters", [])
+            chapter_details = []
+
+            for chapter in chapters:
+                chapter_name = chapter.get("name")
+                subchapter_names = [subchapter.get("name") for subchapter in chapter.get("subchapters", [])]
+                chapter_details.append({"name": chapter_name, "subchapters": subchapter_names})
+
+            extracted_data = {"subject": subject, "chapters": chapter_details}
+            logger.debug(f"Extracted data: {extracted_data}")
+            return extracted_data
+        except Exception as e:
+            logger.error(f"Error extracting document details: {e}")
+            return {}
+
+    async def process_document(self, gcs_file: GCSFile, prompt_path: str):
+        """
+        Processes a GCS file, extracts metadata, and stores it in the database.
+        """
+        logger.info(f"Processing GCS file: {gcs_file}")
+
+        try:
+            gcs_uri = f"gs://{gcs_file.bucket}/{gcs_file.name}"
+            logger.debug(f"Constructed GCS URI: {gcs_uri}")
+
+            # Extract document details using the AIService
+            extracted_details = self.ai_service.extract_document_details(gcs_uri, prompt_path)
+
+            if not extracted_details:
+                logger.warning(f"Failed to extract details from document: {gcs_uri}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to extract document details"
+                )
+
+            # Extract specific document details
+            extracted_data = self._extract_document_details(extracted_details)
+
+            # Create a DocumentDetails object
+            db_document_details = DocumentDetails(
+                gcs_file_id=gcs_file.id,
+                subject=extracted_data.get("subject"),
+                extracted_data=extracted_data,
+                full_metadata=extracted_details,
+            )
+            self.db.add(db_document_details)
+            self.db.commit()
+            self.db.refresh(db_document_details)
+
+            logger.info(f"Successfully processed GCS file and stored details in the database. Document Details ID: {db_document_details.id}")
+            return extracted_details  # Or return db_document_details if you want the database object
+
+        except Exception as e:
+            self.db.rollback()
+            logger.exception(f"Error processing GCS file: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error processing document: {e}"
+            )
+
+    async def get_all_uris(self) -> List[URIResponse]:
+        """
+        Retrieves a list of all URIs from the database.
+        """
+        logger.info("Retrieving a list of all URIs from the database.")
+        try:
+            uris = self.db.query(URI).all()
+            # Convert the SQLAlchemy objects to URIResponse objects, formatting datetime and ensuring metadata is a dict
+            uri_responses = []
+            for uri in uris:
+                uri_data: Dict[str, Any] = {  # Specify types for uri_data
+                    "id": uri.id,
+                    "uri": uri.uri,
+                    "user_id": uri.user_id,
+                    "created_at": uri.created_at.isoformat() if uri.created_at else None,
+                    "last_processed_at": uri.last_processed_at.isoformat() if uri.last_processed_at else None,
+                    "status": uri.status,
+                    "error_message": uri.error_message,
+                    "created_by_system": uri.created_by_system,
+                    "metadata": uri.metadata if isinstance(uri.metadata, dict) else {},  # Ensure metadata is a dict
+                }
+                uri_responses.append(URIResponse(**uri_data))
+
+            logger.debug(f"Retrieved {len(uris)} URIs.")
+            return uri_responses
+        except Exception as e:
+            logger.exception(f"Error retrieving URIs: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error retrieving URIs"
+            )
+
+    async def get_doc_list(self) -> List[DocListResponse]:
+        """
+        Retrieves a list of documents with their names, subjects, and extracted data.
+        """
+        logger.info("Retrieving a list of documents with their names, subjects, and extracted data.")
+        try:
+            # Join the gcs_files and document_details tables
+            doc_list = self.db.query(GCSFile.name, DocumentDetails.subject, DocumentDetails.extracted_data).join(
+                DocumentDetails, GCSFile.id == DocumentDetails.gcs_file_id
+            ).all()
+
+            # Convert the results to a list of DocListResponse objects
+            doc_list_response = [DocListResponse(name=name, subject=subject, extracted_data=extracted_data) for name, subject, extracted_data in doc_list]
+
+            logger.debug(f"Retrieved {len(doc_list_response)} documents with details.")
+            return doc_list_response
+        except Exception as e:
+            logger.exception(f"Error retrieving document list: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error retrieving document list"
+            )
+
+# 

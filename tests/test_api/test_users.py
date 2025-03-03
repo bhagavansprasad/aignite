@@ -1,56 +1,28 @@
-# tests/test_api/test_users.py
-
 import pytest
 import requests
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.pool import StaticPool
-from typing import Generator
-
-from app.core.config import TEST_DATABASE_URL 
-from app.models.base import Base
-from app.models import user as user_model
-from app.database_drivers.postgres_driver import PostgresDriver, get_db
-from app import schemas
-from app.core import security
-from app.services import user_service
-from app.api import router as api_router
+from typing import Dict
+from app.api.users import router as api_router  # Corrected import
 import os
 
-# Define base URL
-BASE_URL = "http://localhost:8000"
+from app.core.config import settings 
+TEST_DATABASE_URL = settings.TEST_DATABASE_URL
+SERVER_URL = settings.SERVER_URL
 
 # Client for making requests to the test app
 app = FastAPI()
-app.include_router(api_router)
-
-# Create a database engine for testing
-test_engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool)
-
-# Dependency to get the testing database session
-def override_get_db() -> Generator:
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
-
-app.dependency_overrides[get_db] = override_get_db
-
-from fastapi.testclient import TestClient
+app.include_router(api_router, prefix="/users")  # Add prefix
 client = TestClient(app)
 
 # Test data
+BASE_URL = SERVER_URL + "/users"  # Ensure the base URL includes the prefix
 test_data = {
     "valid": {
         "full_name": "Valid Test",
-        "email": "valid@example.com",
+        "email": "bhagavan",
         "mobile_no": "5551234567",
-        "password": "secure_password"
+        "password": "jnjnuh"
     },
     "invalid_email": {
         "full_name": "Invalid Email",
@@ -67,47 +39,100 @@ test_data = {
     "missing_field": {
         "email": "valid3@example.com",
         "mobile_no": "5551234567",
-        "password": "secure_password" # Missing full_name
+        "password": "secure_password"  # Missing full_name
     },
     "sql_injection": {
-        "full_name": "'; DROP TABLE users;--", # SQL Injection name, and is usually handled by DB
+        "full_name": "'; DROP TABLE users;--",  # SQL Injection name, and is usually handled by DB
         "email": "valid_sql@example.com",
         "mobile_no": "5551234567",
         "password": "secure_password"
     }
 }
 
-@pytest.fixture() # autouse=True scope="session"
+# Helper function to get a token (replace with your actual token retrieval mechanism)
+def get_token(role: str) -> str:
+    """
+    Replace this with your actual token retrieval logic.  This is a placeholder.
+    In a real application, you'd likely call an authentication endpoint
+    to get a JWT token for a specific user/role.
+    """
+    # This is a dummy implementation - NEVER hardcode tokens in real code!
+    if role == "detailed_list_users":
+        return "detailed_list_users_token"
+    elif role == "list_user_roles":
+        return "list_user_roles_token"
+    elif role == "list_users":
+        return "list_users_token"
+    elif role == "create_user":
+        return "create_user_token"
+    else:
+        return "invalid_token"  # Or handle the case where the role is unknown
+
+# Fixture to create a test database - this is only used for the API itself
+@pytest.fixture()
 def setup_test_db():
     """Sets up a clean test database before each test function."""
-    # engine = create_engine(testURL)
-    Base.metadata.drop_all(bind=test_engine)
-    Base.metadata.create_all(bind=test_engine)
-    yield
+    yield  # The API needs the test database to exist, but the tests don't use it directly
 
-def test_read_users(setup_test_db):
-    """Test the GET /users/ endpoint."""
-    response = client.get(f"{BASE_URL}/users/")
-    assert response.status_code == 200
-    data = response.json()
-    assert isinstance(data, list) # checking for JSON list
-
+# Test to create a valid user
 def test_create_valid_user(setup_test_db):
     """Test the POST /users/ endpoint with valid data."""
-    response = client.post(f"{BASE_URL}/users/", json=test_data["valid"])
+    headers = {"Authorization": f"Bearer {get_token('create_user')}"}  # Add token
+    response = client.post(f"{BASE_URL}/", json=test_data["valid"], headers=headers)
     assert response.status_code == 200, response.text
     created_user = response.json()
     assert created_user["email"] == test_data["valid"]["email"]
     assert created_user["full_name"] == test_data["valid"]["full_name"]
+    global created_user_email
+    created_user_email = created_user["email"] # Store the user email for listing user tests
 
-    # Test with DB credentials and make sure they are valid and safe.
-
+# Test to handle creation of user with an invalid email
 def test_create_invalid_email(setup_test_db):
     """Test the POST /users/ endpoint with invalid email data."""
-    response = client.post(f"{BASE_URL}/users/", json=test_data["invalid_email"])
-    assert response.status_code == 400 # Checking for a general response code
+    headers = {"Authorization": f"Bearer {get_token('create_user')}"}  # Add token
+    response = client.post(f"{BASE_URL}/", json=test_data["invalid_email"], headers=headers)
+    assert response.status_code == 400  # Expecting error response for invalid data
 
+# Test to handle creation of user with an invalid mobile number
 def test_create_invalid_mobile(setup_test_db):
     """Test the POST /users/ endpoint with invalid mobile data."""
-    response = client.post(f"{BASE_URL}/users/", json=test_data["invalid_mobile"])
-    assert response.status_code == 400 # Checking for a general response code
+    headers = {"Authorization": f"Bearer {get_token('create_user')}"}  # Add token
+    response = client.post(f"{BASE_URL}/", json=test_data["invalid_mobile"], headers=headers)
+    assert response.status_code == 400  # Expecting error response for invalid data
+
+# Test to get a detailed list of users
+def test_read_users_detailed(setup_test_db):
+    """Test the GET /users/detailed endpoint."""
+    headers = {"Authorization": f"Bearer {get_token('detailed_list_users')}"}  # Add token
+    response = client.get(f"{BASE_URL}/detailed", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    #Add check to make sure email that was created is present
+    user_emails = [user["email"] for user in data]
+    assert created_user_email in user_emails
+
+# Test to get a list of users with roles
+def test_read_user_roles(setup_test_db):
+    """Test the GET /users/user_roles endpoint."""
+    headers = {"Authorization": f"Bearer {get_token('list_user_roles')}"}  # Add token
+    response = client.get(f"{BASE_URL}/user_roles", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+
+# Test to get a basic list of users
+def test_read_users_basic(setup_test_db):
+    """Test the GET /users/ endpoint to list users (basic info)."""
+    headers = {"Authorization": f"Bearer {get_token('list_users')}"}  # Add token
+    response = client.get(f"{BASE_URL}/", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+
+# Test to create a user without proper roles
+def test_create_user_no_roles(setup_test_db):
+    """Test the POST /users/ endpoint to list users (basic info)."""
+    headers = {"Authorization": f"Bearer {get_token('invalid')}"}  # Add token
+    response = client.post(f"{BASE_URL}/", json=test_data["valid"], headers=headers)
+    assert response.status_code == 403

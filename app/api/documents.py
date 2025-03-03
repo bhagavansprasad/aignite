@@ -21,9 +21,9 @@ from app.schemas.doc_list_schemas import DocListResponse
 
 logger = logging.getLogger("app")
 
-router = APIRouter()
+documents_router = APIRouter()
 
-@router.post("/documents/ingest/", status_code=status.HTTP_202_ACCEPTED)
+@documents_router.post("/documents/ingest/", status_code=status.HTTP_202_ACCEPTED)
 async def ingest_documents(
     *,
     uri: str = Query(..., description="GCS URI of the bucket"),
@@ -128,7 +128,7 @@ async def ingest_documents(
             detail="Error processing GCS metadata."
         )
 
-@router.get("/documents/", response_model=List[URIResponse])
+@documents_router.get("/documents/", response_model=List[URIResponse])
 async def list_documents(
     db: Session = Depends(get_db),
     current_user: user_schemas.User = Depends(check_role("list_documents"))  # Optional: Add a permission check
@@ -141,7 +141,7 @@ async def list_documents(
     uris = await document_service.get_all_uris()
     return uris
 
-@router.post("/documents/{gcs_file_id}/process", status_code=status.HTTP_200_OK)
+@documents_router.post("/documents/{gcs_file_id}/process", status_code=status.HTTP_200_OK)
 async def process_document(
     gcs_file_id: str,  # gcs_files.id is a string
     db: Session = Depends(get_db),
@@ -190,7 +190,7 @@ async def process_document(
             detail="Error processing document"
         )
 
-@router.get("/document_details/{document_details_id}", response_model=DocumentDetailsResponse)
+@documents_router.get("/document_details/{document_details_id}", response_model=DocumentDetailsResponse)
 def get_document_details(
     document_details_id: int, 
     db: Session = Depends(get_db),
@@ -206,7 +206,7 @@ def get_document_details(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document details not found")
     return document_details
 
-@router.get("/doc_list/", response_model=List[DocListResponse])
+@documents_router.get("/doc_list/", response_model=List[DocListResponse])
 async def get_doc_list(
     db: Session = Depends(get_db),
     current_user: user_schemas.User = Depends(check_role("get_doc_list"))
