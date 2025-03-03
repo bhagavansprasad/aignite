@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 from typing import Generator
 
-from app.core.config import TEST_DATABASE_URL # test URL is pulled
+from app.core.config import TEST_DATABASE_URL 
 from app.models.base import Base
 from app.models import user as user_model
 from app.database_drivers.postgres_driver import PostgresDriver, get_db
