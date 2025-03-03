@@ -1,7 +1,7 @@
 import pytest
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
-from app.api.router import api_router  # Import the combined router
+from app.api.router import api_router
 from app.core.config import settings
 import os
 
@@ -15,14 +15,19 @@ client = TestClient(app)
 
 # Test data
 LOGIN_URL = "/api/auth/login"
-VALID_USERNAME = "bhagavan"  # Replace with a valid username from your test database
-VALID_PASSWORD = "jnjnuh"  # Replace with the corresponding password
+# (username, password, expected_role)
+TEST_USERS = [
+    ("user1", "jnjnuh", "ADMIN"),
+    ("user2", "jnjnuh", "TEACHER"),
+    ("user3", "jnjnuh", "STUDENT"),
+]
 INVALID_USERNAME = "invalid_user"
 INVALID_PASSWORD = "invalid_password"
 
-def test_valid_login():
-    """Test successful login with valid credentials."""
-    data = {"username": VALID_USERNAME, "password": VALID_PASSWORD}
+@pytest.mark.parametrize("username, password, expected_role", TEST_USERS)
+def test_valid_login(username: str, password: str, expected_role: str):
+    """Test successful login with valid credentials for different users."""
+    data = {"username": username, "password": password}
     response = client.post(LOGIN_URL, data=data)
 
     assert response.status_code == 200
@@ -31,11 +36,11 @@ def test_valid_login():
     assert "role" in response.json()
     assert "user_full_name" in response.json()
     assert response.json()["token_type"] == "bearer"
-    # You may want to further decode the token and validate its contents
+    assert response.json()["role"] == expected_role
 
 def test_invalid_username_login():
     """Test login with an invalid username."""
-    data = {"username": INVALID_USERNAME, "password": VALID_PASSWORD}
+    data = {"username": INVALID_USERNAME, "password": "jnjnuh"}
     response = client.post(LOGIN_URL, data=data)
 
     assert response.status_code == 401
@@ -43,7 +48,7 @@ def test_invalid_username_login():
 
 def test_invalid_password_login():
     """Test login with a valid username but an invalid password."""
-    data = {"username": VALID_USERNAME, "password": INVALID_PASSWORD}
+    data = {"username": "user1@example.com", "password": INVALID_PASSWORD}
     response = client.post(LOGIN_URL, data=data)
 
     assert response.status_code == 401
@@ -51,7 +56,7 @@ def test_invalid_password_login():
 
 def test_missing_username_login():
     """Test login with a missing username."""
-    data = {"password": VALID_PASSWORD}
+    data = {"password": "jnjnuh"}
     response = client.post(LOGIN_URL, data=data)
 
     assert response.status_code == 422  # Unprocessable Entity (validation error)
@@ -60,10 +65,9 @@ def test_missing_username_login():
 
 def test_missing_password_login():
     """Test login with a missing password."""
-    data = {"username": VALID_USERNAME}
+    data = {"username": "user1@example.com"}
     response = client.post(LOGIN_URL, data=data)
 
     assert response.status_code == 422  # Unprocessable Entity (validation error)
     # Check for specific error message indicating password is missing
     assert "password" in response.json()["detail"][0]["loc"] # or other relevant validation error
-    

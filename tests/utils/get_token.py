@@ -7,8 +7,8 @@ import json
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)  # Get logger for this module
 
-
-def get_token_from_login(config_file="config.json"):
+conf_file = "tests/utils/config.json"
+def get_token_from_login(config_file=conf_file):
     """
     Logs in to the API, retrieves the access token, and returns it.
 
@@ -72,7 +72,7 @@ def get_token_from_login(config_file="config.json"):
 
 
 if __name__ == "__main__":
-    access_token = get_token_from_login()
+    access_token = get_token_from_login(conf_file)
 
     if access_token:
         # print(f"login successful, token...")
