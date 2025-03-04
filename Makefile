@@ -19,7 +19,7 @@ help:
 	@echo "  make showlogs  - Continuously display the server logs"
 	@echo "  make utest     - Runs unit tests"
 	@echo "  make e2e       - Runs end-to-end tests"
-	@echo ""
+	@echo " "
 	@echo "Example: make start"
 
 start:
