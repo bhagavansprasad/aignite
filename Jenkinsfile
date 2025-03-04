@@ -2,22 +2,27 @@ pipeline {
     agent any
 
     environment {
-        VENV_DIR = 'venv'
+        BRANCH_NAME = "${env.BRANCH_NAME ?: 'bhagavan_aignite'}"
+    }
+
+    triggers {
+        // Automatically trigger builds on push or PR updates
+        pollSCM('* * * * *')
     }
 
     stages {
         stage('Clone Repository') {
             steps {
-                echo "Cloning the repository..."
-                git branch: 'bhagavan_aignite', url: 'https://github.com/bhagavansprasad/aignite.git'
+                echo "Cloning branch: ${BRANCH_NAME}"
+                git branch: "${BRANCH_NAME}", url: 'https://github.com/bhagavansprasad/aignite.git'
             }
         }
 
         stage('Checkout Branch') {
             steps {
                 script {
-                    sh 'git checkout bhagavan_aignite'
-                    sh 'git pull origin bhagavan_aignite'
+                    sh 'git checkout ${BRANCH_NAME}'
+                    sh 'git pull origin ${BRANCH_NAME}'
                 }
             }
         }
@@ -37,8 +42,8 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 script {
-                    sh '. venv/bin/activate && pip install --upgrade pip'
-                    sh '. venv/bin/activate && pip install -r requirements.txt'
+                    sh 'source venv/bin/activate && pip install --upgrade pip'
+                    sh 'source venv/bin/activate && pip install -r requirements.txt'
                 }
             }
         }
@@ -46,7 +51,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    sh '. venv/bin/activate && make utest'
+                    sh 'source venv/bin/activate && make utest'
                 }
             }
         }
@@ -54,7 +59,7 @@ pipeline {
         stage('Cleanup') {
             steps {
                 script {
-                    sh 'if [ -f venv/bin/activate ]; then . venv/bin/activate && deactivate; fi'
+                    sh 'deactivate || echo "Virtual environment already deactivated"'
                 }
             }
         }
@@ -66,4 +71,3 @@ pipeline {
         }
     }
 }
-
