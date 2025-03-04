@@ -18,3 +18,6 @@ cohere
 transformers 
 openai
 jinja2
+pytest
+pytest-mock
+

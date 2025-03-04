@@ -1,0 +1,22 @@
+INFO:     Will watch for changes in these directories: ['/home/bhagavan/dev/aignite']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [62850] using StatReload
+/home/bhagavan/venv/aignite/lib/python3.12/site-packages/pydantic/_internal/_config.py:345: UserWarning: Valid config keys have changed in V2:
+* 'orm_mode' has been renamed to 'from_attributes'
+  warnings.warn(message, UserWarning)
+/home/bhagavan/venv/aignite/lib/python3.12/site-packages/pydantic/_internal/_config.py:345: UserWarning: Valid config keys have changed in V2:
+* 'orm_mode' has been renamed to 'from_attributes'
+  warnings.warn(message, UserWarning)
+2025-03-04 10:44:07,453 [INFO] app (main.py:49): FastAPI application started.
+INFO:     Started server process [62860]
+INFO:     Waiting for application startup.
+2025-03-04 10:44:07,560 [INFO] app (main.py:25): Starting up the application...
+2025-03-04 10:44:07,561 [DEBUG] app (database.py:16): Creating database session.
+2025-03-04 10:44:07,561 [DEBUG] app (database.py:22): Closing database session.
+2025-03-04 10:44:07,561 [INFO] app (main.py:34): Application startup tasks completed.
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [62860]
+INFO:     Stopping reloader process [62850]

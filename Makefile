@@ -1,11 +1,11 @@
 BASE_FOLDER="$(PWD)"
-APP_FOLDER="$(BASE_FOLDER)/"
+APP_FOLDER="$(BASE_FOLDER)/" 
 LOGS_FOLDER=$(BASE_FOLDER)/logs
 SERVICE="aignite"
 PORT=8000
 SHUTDOWN_WAIT_SECONDS=5
 
-.PHONY: help start stop status restart clean logs
+.PHONY: help start stop status restart clean logs utest e2e
 
 help:
 	@echo "Usage: make <command>"
@@ -17,6 +17,8 @@ help:
 	@echo "  make status    - Show the status of server"
 	@echo "  make clean     - Clean logs and temporary files"
 	@echo "  make showlogs  - Continuously display the server logs"
+	@echo "  make utest     - Runs unit tests"
+	@echo "  make e2e       - Runs end-to-end tests"
 	@echo ""
 	@echo "Example: make start"
 
@@ -89,3 +91,11 @@ clean:
 	@find "$(BASE_FOLDER)" -name __pycache__ -type d -exec rm -rf {} +
 	@echo "Cleaned."
 
+utest:
+	@echo "Running unit tests..."
+	@pytest tests/unit/
+
+e2e:
+	@echo "Running end-to-end tests..."
+	@pytest tests/e2e/
+	

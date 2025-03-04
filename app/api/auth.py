@@ -24,10 +24,10 @@ def login(
     """Handles user login and JWT authentication"""
     user = db.query(User).filter(User.full_name == username, User.is_active == True).first()
 
-    # print(f'username :{username}')
-    # print(f'fullname :{user}')
-    # print(f'password :{password}')
-    # print(f'password :{user.password}')
+    print(f'username :{username}')
+    print(f'fullname :{user}')
+    print(f'password :{password}')
+    print(f'password :{user.password}')
     
     if not user or not verify_password(password, user.password):
         whereami()

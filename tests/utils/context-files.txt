@@ -1,5 +1,6 @@
 app/api/router.py
 app/main.py
+app/api/auth.py
 app/api/router.py
 app/core/config.py
 app/api/users.py
