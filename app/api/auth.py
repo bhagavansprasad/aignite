@@ -11,7 +11,6 @@ from app.core.security import get_current_user, get_current_active_user
 import jwt
 import logging
 from app.core.config import settings 
-from pdbwhereami import whereami
 
 auth_router = APIRouter()
 
@@ -30,7 +29,6 @@ def login(
     print(f'password :{user.password}')
     
     if not user or not verify_password(password, user.password):
-        whereami()
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
     role = db.query(Role.name).filter(Role.id == user.role_id).scalar()
