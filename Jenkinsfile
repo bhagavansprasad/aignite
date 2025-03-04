@@ -9,7 +9,7 @@ pipeline {
         stage('Clone Repository') {
             steps {
                 echo "Cloning the repository..."
-                git branch: 'main', url: 'https://github.com/your-repo.git'
+                git branch: 'bhagavan_aignite', url: 'https://github.com/bhagavansprasad/aignite.git'
             }
         }
 
@@ -37,11 +37,8 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 script {
-                    sh '''
-                    source venv/bin/activate
-                    pip install --upgrade pip
-                    pip install -r requirements.txt
-                    '''
+                    sh '. venv/bin/activate && pip install --upgrade pip'
+                    sh '. venv/bin/activate && pip install -r requirements.txt'
                 }
             }
         }
@@ -49,7 +46,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    sh 'source venv/bin/activate && make utest'
+                    sh '. venv/bin/activate && make utest'
                 }
             }
         }
@@ -57,7 +54,7 @@ pipeline {
         stage('Cleanup') {
             steps {
                 script {
-                    sh 'deactivate || echo "Virtual environment already deactivated"'
+                    sh 'if [ -f venv/bin/activate ]; then . venv/bin/activate && deactivate; fi'
                 }
             }
         }
