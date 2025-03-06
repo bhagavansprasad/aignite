@@ -4,7 +4,7 @@ pipeline {
     environment {
         BRANCH_NAME = "${env.BRANCH_NAME ?: 'bhagavan_aignite'}"
         GIT_COMMIT_HASH = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
-        GITHUB_TOKEN = credentials('github-token') // Add your GitHub PAT as a Jenkins credential
+        GITHUB_TOKEN = credentials('githubtoken') // Add your GitHub PAT as a Jenkins credential
         GITHUB_REPO = 'bhagavansprasad/aignite' // Your repo name
     }
 
