@@ -44,7 +44,8 @@ pipeline {
                 script {
                     // sh 'source venv/bin/activate && pip install --upgrade pip'
                     sh 'bash -c "source venv/bin/activate && echo Virtualenv Activated"'
-                    sh 'source venv/bin/activate && pip install -r requirements.txt'
+                    // sh 'source venv/bin/activate && pip install -r requirements.txt'
+                    sh 'bash -c "source venv/bin/activate && pip install -r requirements.txt"'
                 }
             }
         }
@@ -52,7 +53,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    sh 'source venv/bin/activate && make utest'
+                    sh 'bash -c "source venv/bin/activate && make utest"'
                 }
             }
         }
@@ -60,7 +61,7 @@ pipeline {
         stage('Cleanup') {
             steps {
                 script {
-                    sh 'deactivate || echo "Virtual environment already deactivated"'
+                    sh 'bash -c "deactivate || echo "Virtual environment already deactivated"'
                 }
             }
         }
