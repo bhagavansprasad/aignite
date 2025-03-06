@@ -4,13 +4,11 @@ pipeline {
     environment {
         BRANCH_NAME = "${env.BRANCH_NAME ?: 'bhagavan_aignite'}"
         GIT_COMMIT_HASH = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
-        // GITHUB_TOKEN = credentials('githubtoken') // Add your GitHub PAT as a Jenkins credential
-        GITHUB_TOKEN = credentials('NewGitHubTokenPublishResults') // Add your GitHub PAT as a Jenkins credential
-        GITHUB_REPO = 'bhagavansprasad/aignite' // Your repo name
+        GITHUB_TOKEN = credentials('NewGitHubTokenPublishResults')
+        GITHUB_REPO = 'bhagavansprasad/aignite' 
     }
 
     triggers {
-        // Automatically trigger builds on push or PR updates
         pollSCM('* * * * *')
     }
 
@@ -54,9 +52,7 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 script {
-                    // sh 'source venv/bin/activate && pip install --upgrade pip'
                     sh 'bash -c "source venv/bin/activate && echo Virtualenv Activated"'
-                    // sh 'source venv/bin/activate && pip install -r requirements.txt'
                     sh 'bash -c "source venv/bin/activate && pip install -r requirements.txt"'
                 }
             }
