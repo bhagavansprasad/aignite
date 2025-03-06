@@ -42,7 +42,8 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 script {
-                    sh 'source venv/bin/activate && pip install --upgrade pip'
+                    // sh 'source venv/bin/activate && pip install --upgrade pip'
+                    sh 'bash -c "source venv/bin/activate && echo Virtualenv Activated"'
                     sh 'source venv/bin/activate && pip install -r requirements.txt'
                 }
             }
