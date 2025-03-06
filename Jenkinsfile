@@ -61,7 +61,7 @@ pipeline {
         stage('Cleanup') {
             steps {
                 script {
-                    sh 'bash -c "deactivate || echo "Virtual environment already deactivated"'
+                    sh 'bash -c "deactivate" || echo "Virtual environment already deactivated"'
                 }
             }
         }
