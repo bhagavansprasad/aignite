@@ -3,6 +3,9 @@ pipeline {
 
     environment {
         BRANCH_NAME = "${env.BRANCH_NAME ?: 'bhagavan_aignite'}"
+        GIT_COMMIT_HASH = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
+        GITHUB_TOKEN = credentials('github-token') // Add your GitHub PAT as a Jenkins credential
+        GITHUB_REPO = 'bhagavansprasad/aignite' // Your repo name
     }
 
     triggers {
@@ -11,6 +14,14 @@ pipeline {
     }
 
     stages {
+        stage('Set Build Status: Pending') {
+            steps {
+                script {
+                    updateGitHubStatus('pending', "Build started...")
+                }
+            }
+        }
+
         stage('Clone Repository') {
             steps {
                 echo "Cloning branch: ${BRANCH_NAME}"
@@ -58,18 +69,40 @@ pipeline {
             }
         }
 
-        stage('Cleanup') {
+        stage('Set Build Status: Success') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
             steps {
                 script {
-                    sh 'bash -c "deactivate" || echo "Virtual environment already deactivated"'
+                    updateGitHubStatus('success', "Build completed successfully!")
                 }
             }
         }
     }
 
     post {
+        failure {
+            script {
+                updateGitHubStatus('failure', "Build failed! Check logs.")
+            }
+        }
         always {
             echo "Pipeline execution completed!"
         }
     }
+}
+
+// Function to update GitHub commit status
+def updateGitHubStatus(String state, String description) {
+    sh """
+        curl -X POST -H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3+json" \
+        https://api.github.com/repos/${GITHUB_REPO}/statuses/${GIT_COMMIT_HASH} \
+        -d '{
+            "state": "${state}",
+            "description": "${description}",
+            "context": "Jenkins CI/CD",
+            "target_url": "${env.BUILD_URL}"
+        }'
+    """
 }
