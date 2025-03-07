@@ -26,6 +26,7 @@ from app.models.tokens import Token
 from app.models.uris import URI  
 from app.models.gcs_file import GCSFile 
 from app.schemas.gcs_file_schemas import GCSFileResponse
+from app.schemas.document_details_schemas import SubjectDetails
 
 
 logger = logging.getLogger("app")
@@ -375,3 +376,48 @@ def extract_document_data(gcs_ids: List[int]):
     finally:
         db.close()
         
+        
+@documents_router.get("/get_subjects/", summary="Get Subjects with Chapter Details", response_model=List[SubjectDetails])
+async def get_subjects(
+    db: Session = Depends(get_db),
+    current_user: user_schemas.User = Depends(check_role("get_subjects"))  # Optional permission check
+):
+    """
+    Retrieves a list of subjects, chapter details, and file information for all documents.
+    """
+    logger.info(f"User {current_user.email} is requesting a list of subjects with chapter details.")
+
+    try:
+        # Perform a join to retrieve the required information
+        results = db.query(
+            DocumentDetails.id,
+            DocumentDetails.gcs_file_id,
+            DocumentDetails.subject,
+            DocumentDetails.extracted_data,
+            GCSFile.uri_id,
+            GCSFile.name
+        ).join(GCSFile, GCSFile.id == DocumentDetails.gcs_file_id).all()
+
+        subject_list = []
+        for doc_id, gcs_file_id, subject, extracted_data, uri_id, name in results:
+            chapters = extracted_data.get("chapters") if extracted_data else None
+
+            subject_details = SubjectDetails(
+                id=doc_id,
+                gcs_file_id=gcs_file_id,
+                subject=subject,
+                chapters=chapters,
+                uri_id=uri_id,
+                name=name
+            )
+            subject_list.append(subject_details)
+
+        logger.debug(f"Retrieved {len(subject_list)} subjects with chapter details.")
+        return subject_list
+
+    except Exception as e:
+        logger.exception(f"Error retrieving subjects with chapter details: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error retrieving subjects with chapter details"
+        )
