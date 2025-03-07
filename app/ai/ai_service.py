@@ -62,6 +62,7 @@ class AIService:
 
             # Load the base prompt template
             template = self.env.get_template("extract_document_details_prompt.txt")
+            template = self.env.get_template(prompt_path)
             base_prompt = template.render(document_uri=document_uri)
 
             # Initialize the chat session
@@ -116,3 +117,65 @@ class AIService:
             llm_output = llm_output[:-len("```")].strip()
         return llm_output
     
+    def generate_mcqs(self, file_uris: List[str], sub_chapter_string: str, prompt_src: str) -> Dict[str, str]:
+        """
+        Generates Multiple Choice Questions (MCQs) using a language model.
+
+        Args:
+            prompt_src: The path to the prompt file.
+            file_uris: A list of GCS URIs for the documents.
+
+        Returns:
+            A dictionary containing the query and the generated reply.
+        """
+        logger.info(f"Generating MCQs for files: {file_uris} using prompt {prompt_src}")
+
+        try:
+            if self.llm_provider != "vertexai":
+                logger.error("extract_document_details with chat requires vertexai llm provider")
+                return None
+
+            vertexai_connector = self.llm_connector
+            if not isinstance(vertexai_connector, VertexAIConnector):
+                logger.error("Invalid llm connector type, VertexAIConnector required")
+                return None
+
+            # Load the prompt
+            file_uris_str = "\n".join(file_uris)
+            template = self.env.get_template(prompt_src)
+            base_prompt = template.render(file_uris=file_uris[0], sub_chapters=sub_chapter_string)
+
+            # Initialize the chat session
+            chat = vertexai_connector.model.start_chat()
+
+            contents = [
+                Part.from_uri(file_uris[0], mime_type="application/pdf"),
+                Part.from_text(base_prompt)
+            ]
+
+            # Send the message to the chat session
+            response = chat.send_message(Content(role="user", parts=contents))
+
+            llm_output = response.text.strip()
+
+            if not llm_output:
+                logger.warning(f"Failed to extract details from document: {file_uris}")
+                return None
+
+            llm_output = self.clean_llm_output(llm_output)
+
+            try:
+                extracted_details = json.loads(llm_output)
+                # logger.debug(json.dumps(extracted_details, sort_keys=True, indent=4))
+                logger.debug(f"Extracted details: {llm_output}")
+            except json.JSONDecodeError as e:
+                logger.error(f"Error decoding JSON: {e}\nLLM Output: {llm_output}")
+                return None
+
+            logger.info(f"Extracted details from document: {file_uris}")
+            return extracted_details
+
+        except Exception as e:
+            logger.error(f"Error generating MCQs: {e}")
+            return {"query": "Generate MCQs", "reply": f"Error: Could not generate MCQs. {e}"}
+        

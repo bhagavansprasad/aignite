@@ -1,3 +1,5 @@
+# app/ai/llm_connectors/huggingface_connector.py
+
 import logging
 from typing import Optional
 from transformers import pipeline
