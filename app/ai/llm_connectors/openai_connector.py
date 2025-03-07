@@ -1,3 +1,5 @@
+# app/ai/llm_connectors/openai_connector.py
+
 import logging
 from typing import Optional
 import openai

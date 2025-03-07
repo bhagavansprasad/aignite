@@ -237,6 +237,7 @@ async def process_document(
 
         # Process the document
         prompt_path = "app/ai/prompts/extract_document_details_prompt.txt"
+        prompt_path = "extract_document_details_prompt.prompt"
         result = await document_service.process_document(gcs_file, prompt_path)
 
         # Update the 'updated' timestamp
