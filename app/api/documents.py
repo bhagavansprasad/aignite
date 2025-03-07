@@ -18,23 +18,31 @@ from app.core.config import settings
 from app.models.document_details import DocumentDetails
 from app.schemas.document_details_schemas import DocumentDetailsResponse
 from app.schemas.doc_list_schemas import DocListResponse 
+import multiprocessing
+import httpx
+from app.models.tokens import Token
+from app.models.uris import URI
+from app.models.tokens import Token  
+from app.models.uris import URI  
+from app.models.gcs_file import GCSFile 
+
 
 logger = logging.getLogger("app")
 
 documents_router = APIRouter()
 
 @documents_router.post("/documents/ingest/", status_code=status.HTTP_202_ACCEPTED)
-async def ingest_documents(
+async def ingest_uris(
     *,
     uri: str = Query(..., description="GCS URI of the bucket"),
     db: Session = Depends(get_db),
-    current_user: user_schemas.User = Depends(check_role("ingest_documents"))
+    current_user: user_schemas.User = Depends(check_role("ingest_uris"))
 ) -> JSONResponse:
     """
     Ingest documents from a GCS bucket.
     - Adds an entry to the `uris` table.
     - Returns a comprehensive message about the ingestion process.
-    - Requires 'ingest_documents' permission.
+    - Requires 'ingest_uris' permission.
     """
     logger.info(f"User {current_user.email} is ingesting documents from URI: {uri}")
 
@@ -69,7 +77,7 @@ async def ingest_documents(
         gcs_metadata = await document_service.process_gcs_uri(uri)
 
         # Create GCS file entries in the database
-        await document_service.create_gcs_file_entries(gcs_metadata["gcs_files"], uri_obj.id)
+        gcs_ids = await document_service.create_gcs_file_entries(gcs_metadata["gcs_files"], uri_obj.id)
         logger.info(f"Created GCS file entries for URI ID: {uri_obj.id}")
 
         # Construct the simplified GCS metadata
@@ -114,6 +122,16 @@ async def ingest_documents(
             }
         }
 
+        logger.info(f"gcs_ids : {gcs_ids}")
+        
+        # --- Start the background process here ---
+        process = multiprocessing.Process(
+            target=process_documents,
+            args=(gcs_ids,),  # Pass only gcs_file_ids
+        )        
+        process.start()
+        logger.info(f"Started background process (PID: {process.pid}) for URI ID: {uri_obj.id}")
+                
         return JSONResponse(content=response_data, status_code=status.HTTP_202_ACCEPTED)
 
     except HTTPException as e:
@@ -218,3 +236,82 @@ async def get_doc_list(
     document_service = DocumentService(db, None) 
     doc_list = await document_service.get_doc_list()
     return doc_list
+
+
+def post_request_by_doc_id(gcs_file_id: int, api_url: str, token: str):
+    """
+    Sends a POST request to the /process endpoint for a given GCS file ID.
+    """
+    logging.basicConfig(level=logging.INFO)
+    process_logger = logging.getLogger(f"process_api_{gcs_file_id}")
+    process_logger.info(f"Sending POST request to {api_url} for GCS file ID: {gcs_file_id}")
+
+    headers = {
+        "accept": "application/json",
+        "Authorization": f"Bearer {token}",
+    }
+
+    try:
+        response = httpx.post(api_url, headers=headers, timeout=60)  # Adjust timeout as needed
+
+        if response.status_code == 200:
+            process_logger.info(f"Successfully processed GCS file ID {gcs_file_id}: {response.text}")
+        elif response.status_code == 404:
+            process_logger.warning(f"GCS file ID {gcs_file_id} not found: {response.text}")
+        else:
+            process_logger.error(
+                f"Error processing GCS file ID {gcs_file_id}: Status {response.status_code}, {response.text}"
+            )
+
+    except httpx.RequestError as e:
+        process_logger.error(f"Request error processing GCS file ID {gcs_file_id}: {e}")
+    except Exception as e:
+        process_logger.exception(f"Unexpected error processing GCS file ID {gcs_file_id}: {e}")
+
+
+def process_documents(gcs_ids: List[int]):
+    """
+    Sends POST requests to the /process endpoint for each GCS file ID,
+    extracting the token based on the specified relationships.
+    """
+    logging.basicConfig(level=logging.INFO)
+    process_logger = logging.getLogger(f"loop_process_{gcs_ids}")
+    process_logger.info(f"Starting document processing loop for GCS file IDs: {gcs_ids}")
+
+    # Setup database connection (create a new engine and session)
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from app.core.config import settings  # Import settings
+
+    engine = create_engine(settings.DATABASE_URL) # Get DB URL from settings
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    db = SessionLocal()
+
+    try:
+        # Process each document by sending a POST request to the API
+        for gcs_file_id in gcs_ids:
+            # Query to get the token
+            token_entry = (
+                db.query(Token)
+                .join(URI, URI.user_id == Token.user_id)
+                .join(GCSFile, GCSFile.uri_id == URI.id)
+                .filter(GCSFile.id == gcs_file_id)
+                .first()
+            )
+
+            if not token_entry:
+                process_logger.error(f"No token found for GCS file ID {gcs_file_id}.")
+                continue  
+
+            token = token_entry.token
+            api_url = f"{settings.SERVER_URL}/api/documents/documents/{gcs_file_id}/process" #get url from settings
+            post_request_by_doc_id(gcs_file_id, api_url, token)
+
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        process_logger.exception(f"Error in processing loop: {e}")
+    finally:
+        db.close()
+        

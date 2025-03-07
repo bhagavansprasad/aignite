@@ -117,6 +117,8 @@ class DocumentService:
         """Creates GCS file entries in the database."""
         logger.info(f"Creating GCS file entries for URI ID: {uri_id}")
 
+        new_gcs_file_ids: List[int] = []  # Store the IDs of the newly created GCS files
+
         try:
             for file_data in gcs_files:
                 gcs_file_create = GCSFileCreate(**file_data)
@@ -150,9 +152,13 @@ class DocumentService:
 
                 self.db.add(db_gcs_file)
                 logger.debug(f"Added GCS file entry: {db_gcs_file.name}")
-
+                
+                self.db.flush()  
+                new_gcs_file_ids.append(db_gcs_file.id) 
+                
             self.db.commit()
             logger.info(f"Successfully created GCS file entries for URI ID: {uri_id}")
+            return new_gcs_file_ids
 
         except Exception as e:
             self.db.rollback()
