@@ -28,11 +28,10 @@ class GCSFileResponse(BaseModel):
     crc32c: Optional[str] = None
     etag: Optional[str] = None
     timecreated: Optional[datetime] = None
-    updated: Optional[str] = None
+    updated: Optional[str] = None 
     file_metadata: Optional[Dict] = None
     uri_id: int
 
     class Config:
         orm_mode = True
         from_attributes = True
-        
