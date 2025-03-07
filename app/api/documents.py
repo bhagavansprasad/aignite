@@ -25,13 +25,14 @@ from app.models.uris import URI
 from app.models.tokens import Token  
 from app.models.uris import URI  
 from app.models.gcs_file import GCSFile 
+from app.schemas.gcs_file_schemas import GCSFileResponse
 
 
 logger = logging.getLogger("app")
 
 documents_router = APIRouter()
 
-@documents_router.post("/documents/ingest/", status_code=status.HTTP_202_ACCEPTED)
+@documents_router.post("/ingest_uri/", summary="Ingest URIs", status_code=status.HTTP_202_ACCEPTED)
 async def ingest_uris(
     *,
     uri: str = Query(..., description="GCS URI of the bucket"),
@@ -126,7 +127,7 @@ async def ingest_uris(
         
         # --- Start the background process here ---
         process = multiprocessing.Process(
-            target=process_documents,
+            target=extract_document_data,
             args=(gcs_ids,),  # Pass only gcs_file_ids
         )        
         process.start()
@@ -146,10 +147,10 @@ async def ingest_uris(
             detail="Error processing GCS metadata."
         )
 
-@documents_router.get("/documents/", response_model=List[URIResponse])
-async def list_documents(
+@documents_router.get("/list_uris/", summary="List URIs", response_model=List[URIResponse])
+async def list_uris(
     db: Session = Depends(get_db),
-    current_user: user_schemas.User = Depends(check_role("list_documents"))  # Optional: Add a permission check
+    current_user: user_schemas.User = Depends(check_role("list_uris"))
 ):
     """
     Retrieve a list of all ingested documents (URIs).
@@ -159,9 +160,56 @@ async def list_documents(
     uris = await document_service.get_all_uris()
     return uris
 
-@documents_router.post("/documents/{gcs_file_id}/process", status_code=status.HTTP_200_OK)
+@documents_router.get("/gcs_files/", response_model=List[GCSFileResponse], summary="List GCS Files")
+async def list_gcs_files(
+    db: Session = Depends(get_db),
+    current_user: user_schemas.User = Depends(check_role("list_gcs_files"))  # Optional: Add a permission check
+):
+    """
+    Retrieve a list of all GCS file entries.
+    """
+    logger.info(f"User {current_user.email} is requesting a list of GCS files.")
+    
+    try:
+        gcs_files = db.query(GCSFile).all()
+
+        gcs_file_responses = []
+        for gcs_file in gcs_files:
+            # Explicitly format the 'updated' datetime as a string
+            updated_str = gcs_file.updated.isoformat() if gcs_file.updated else None
+
+            # Create a dictionary with the data, including the formatted 'updated' field
+            gcs_file_data = {
+                "id": gcs_file.id,
+                "uri": gcs_file.uri,
+                "name": gcs_file.name,
+                "bucket": gcs_file.bucket,
+                "contenttype": gcs_file.contenttype,
+                "size": gcs_file.size,
+                "md5hash": gcs_file.md5hash,
+                "crc32c": gcs_file.crc32c,
+                "etag": gcs_file.etag,
+                "timecreated": gcs_file.timecreated,
+                "updated": updated_str,  # Use the formatted string
+                "file_metadata": gcs_file.file_metadata,
+                "uri_id": gcs_file.uri_id
+            }
+
+            gcs_file_responses.append(GCSFileResponse(**gcs_file_data)) # Use dictionary and pass
+
+        logger.debug(f"Retrieved {len(gcs_file_responses)} GCS files.")
+        return gcs_file_responses
+    
+    except Exception as e:
+        logger.exception(f"Error retrieving GCS files: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error retrieving GCS files"
+        )
+        
+@documents_router.post("/process", summary="Process Document", status_code=status.HTTP_200_OK) # updated path to be without param, you can also keep as is and extract from request
 async def process_document(
-    gcs_file_id: str,  # gcs_files.id is a string
+    gcs_file_id: str = Query(..., title="GCS File ID"),  # Expect as a query parameter
     db: Session = Depends(get_db),
     current_user: user_schemas.User = Depends(check_role("process_document")),  # Adjust permission as needed
     ai_service: AIService = Depends(lambda: AIService(settings.ai)) # Inject AIService
@@ -208,7 +256,7 @@ async def process_document(
             detail="Error processing document"
         )
 
-@documents_router.get("/document_details/{document_details_id}", response_model=DocumentDetailsResponse)
+@documents_router.get("/{document_id}", summary="Get Document Details", response_model=DocumentDetailsResponse)
 def get_document_details(
     document_details_id: int, 
     db: Session = Depends(get_db),
@@ -224,18 +272,30 @@ def get_document_details(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document details not found")
     return document_details
 
-@documents_router.get("/doc_list/", response_model=List[DocListResponse])
+@documents_router.get("/document_list/", summary="Get Documents List", response_model=List[DocumentDetailsResponse]) #Updated response to DcoumentDetailsResponse
 async def get_doc_list(
     db: Session = Depends(get_db),
     current_user: user_schemas.User = Depends(check_role("get_doc_list"))
 ):
     """
-    Retrieve a list of documents with their names, subjects, and extracted data.
+    Retrieve a list of all document details for all GCS files.
     """
-    logger.info(f"User {current_user.email} is requesting a list of documents with details.")
-    document_service = DocumentService(db, None) 
-    doc_list = await document_service.get_doc_list()
-    return doc_list
+    logger.info(f"User {current_user.email} is requesting a list of all document details.")
+
+    try:
+        document_details = db.query(DocumentDetails).all()  # Get all DocumentDetails entries
+        # updated type to DocumentDetailsResponse and return DocumentDetails entries
+        doc_list_response = [DocumentDetailsResponse.model_validate(dd) for dd in document_details]
+
+        logger.debug(f"Retrieved {len(doc_list_response)} document details.")
+        return doc_list_response
+
+    except Exception as e:
+        logger.exception(f"Error retrieving document details: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error retrieving document details"
+        )
 
 
 def post_request_by_doc_id(gcs_file_id: int, api_url: str, token: str):
@@ -269,7 +329,7 @@ def post_request_by_doc_id(gcs_file_id: int, api_url: str, token: str):
         process_logger.exception(f"Unexpected error processing GCS file ID {gcs_file_id}: {e}")
 
 
-def process_documents(gcs_ids: List[int]):
+def extract_document_data(gcs_ids: List[int]):
     """
     Sends POST requests to the /process endpoint for each GCS file ID,
     extracting the token based on the specified relationships.
@@ -304,7 +364,7 @@ def process_documents(gcs_ids: List[int]):
                 continue  
 
             token = token_entry.token
-            api_url = f"{settings.SERVER_URL}/api/documents/documents/{gcs_file_id}/process" #get url from settings
+            api_url = f"{settings.SERVER_URL}/api/documents/process?gcs_file_id={gcs_file_id}"
             post_request_by_doc_id(gcs_file_id, api_url, token)
 
         db.commit()

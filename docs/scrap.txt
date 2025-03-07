@@ -10,6 +10,7 @@ gs://bhagavan-pub-bucket/genai-resources
 
 delete from document_details where id > 0
 update gcs_files set updated = NULL where id > 0;
+INSERT INTO endpoint_roles (endpoint_name, role_id) VALUES ('list_gcs_files', 1);
 
 delete from gcs_files where id > 0
 
